@@ -12,7 +12,7 @@ The flavor of FORTH that this cross-compiler supports has the following features
 - Seamless manipulation of HERE at both compile-time and runtime
 - Predefined constants and words for the Gameboy hardware
 
-## Prequisites
+## Prerequisites
 - RGBDS (I've only tested with 6.1, older versions probably work as well)
 - Ruby
 
