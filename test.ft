@@ -1,0 +1,20 @@
+: ROT ( a b c -- b c a )
+  >R SWAP R> SWAP
+;
+
+: ROT2 ( aa bb cc -- bb cc aa )
+  >R >R SWAP2 R> R> SWAP2
+;
+
+: DIP ( b [quote] -- ... b )
+  ROT >R CALL R>
+;
+
+: DIP2 ( s [quote] -- ... s )
+  SWAP2 >R >R CALL R> R>
+;
+
+: WHILE ( b [pred]: { b -- ? } [body]: { -- } -- )
+  >R >R 
+;
+
