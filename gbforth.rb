@@ -893,18 +893,6 @@ def compile(code, def_table)
   state.output("\nMain:\n")
   raw_compile!(state, nil)
   def_table.each_value { |d| asm_defs += d.compile_definition if d.interpret }
-#  while not state.end_of_buffer do
-#    t = state.next_word
-#    if state.definitions[t]
-#      state.definitions[t].execute_and_compile(state)
-#    elsif is_byte(t)
-#      state.output("DW LIT\nDB $#{t[1..2]}\n")
-#    elsif is_short(t)
-#      state.output("DW LIT2\nDW $#{t[1..4]}\n")
-#    else
-#      abort("'#{t}' is not defined.")
-#    end
-#  end
   state.output("DW PAUSE\n")
   PREAMBLE + asm_defs + state.output_code
 end
