@@ -229,7 +229,6 @@ DEF_TABLE = {
   "DROP2" => ForthDef.new(
     name: "DROP2",
     interpret: "
-    jp DoCol
     PopD16
     jp Next
     "
