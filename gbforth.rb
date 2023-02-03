@@ -71,6 +71,17 @@ MACRO PeekD
   dec bc
 ENDM
 
+MACRO PeekD16
+  inc bc
+  ld a, [bc]
+  ld h, a
+  inc bc
+  ld a, [bc]
+  ld l, a
+  dec bc
+  dec bc
+ENDM
+
 MACRO PushR
   add sp,-1
   ld hl,sp+0
@@ -122,12 +133,12 @@ Next:
   pop de
   jp hl
 
-DoConst:
+DoConst8:
   inc hl
   inc hl
   inc hl
   ld a,[hl]
-  PushD
+  PushD16
   jp Next
 
 DoConst16:
@@ -202,14 +213,15 @@ DEF_TABLE = {
   "DUP" => ForthDef.new(
     name: "DUP",
     interpret: "
-    PeekD
-    PushD
+    PeekD16
+    PushD16
     jp Next
     "
   ),
 
-  "DUP2" => ForthDef.new(
-    name: "DUP2",
+  "2DUP" => ForthDef.new(
+    name: "2DUP",
+    label: "TWO_DUP_FORTH",
     interpret: "
     jp DoCol
     DW OVER
@@ -221,25 +233,29 @@ DEF_TABLE = {
   "DROP" => ForthDef.new(
     name: "DROP",
     interpret: "
-    PopD
+    PopD16
     jp Next
     "
   ),
 
-  "DROP2" => ForthDef.new(
-    name: "DROP2",
+  "2DROP" => ForthDef.new(
+    name: "2DROP",
+    label: "TWO_DROP_FORTH",
     interpret: "
-    PopD16
-    jp Next
+    jp DoCol
+    DW DROP
+    DW DROP
+    DW QUOTE_END
     "
   ),
 
   "NIP" => ForthDef.new(
     name: "NIP",
     interpret: "
-    PopD
+    PopD16
     inc bc
-    PushD
+    inc bc
+    PushD16
     jp Next
     "
   ),
@@ -248,8 +264,8 @@ DEF_TABLE = {
     name: ">R",
     label: "STASH_FORTH",
     interpret: "
-    PopD
-    PushR
+    PopD16
+    push hl
     jp Next
     "
   ),
@@ -258,8 +274,8 @@ DEF_TABLE = {
     name: "R>",
     label: "FETCH_FORTH",
     interpret: "
-    PopR
-    PushD
+    pop hl
+    PushD16
     jp Next
     "
   ),
@@ -268,22 +284,24 @@ DEF_TABLE = {
     name: "SWAP",
     label: "SWAP_FORTH",
     interpret: "
-    PopD
-    ld h,a
-    PopD
-    ld l,a
-    ld a,h
-    PushD
-    ld a,l
-    PushD
+    PopD16
+    push de
+    ld d, h
+    ld e, l
+    PopD16
+    ld a, d
+    ld d, h
+    ld h, a
+    ld a, e
+    ld e, l
+    ld l, a
+    PushD16
+    ld h, d
+    ld l, e
+    PushD16
+    pop de
     jp Next
-    "
-  ),
 
-  "SWAP2" => ForthDef.new(
-    name: "SWAP2",
-    label: "SWAP_FORTH_16",
-    interpret: "
     PopD16
     push de
     push bc
@@ -309,10 +327,17 @@ DEF_TABLE = {
     interpret: "
     inc bc
     inc bc
-    ld a,[bc]
+    inc bc
+    inc bc
+    ld a, [bc]
+    ld l, a
+    dec bc
+    ld a, [bc]
+    ld h, a
     dec bc
     dec bc
-    PushD
+    dec bc
+    PushD16
     jp Next
     "),
 
@@ -322,11 +347,20 @@ DEF_TABLE = {
     inc bc
     inc bc
     inc bc
-    ld a,[bc]
+    inc bc
+    inc bc
+    inc bc
+    ld a, [bc]
+    ld l, a
+    dec bc
+    ld a, [bc]
+    ld h, a
     dec bc
     dec bc
     dec bc
-    PushD
+    dec bc
+    dec bc
+    PushD16
     jp Next
     "
   ),
@@ -372,8 +406,8 @@ DEF_TABLE = {
   ),
 
   # Pushes the byte pointed to by '&a'.
-  "@" => ForthDef.new( # ( &a -- b )
-    name: "@",
+  "C@" => ForthDef.new( # ( &a -- b )
+    name: "C@",
     label: "LOAD_AT",
     interpret: "
     PopD16
@@ -384,8 +418,8 @@ DEF_TABLE = {
   ),
 
   # Pushes the short pointed to by '&a'.
-  "@@" => ForthDef.new(
-    name: "@@",
+  "@" => ForthDef.new(
+    name: "@",
     label: "LOAD_AT_16",
     interpret: "
     PopD16
@@ -398,8 +432,8 @@ DEF_TABLE = {
   ),
 
   # Stores the byte 'b' at the address '&a'.
-  "!" => ForthDef.new( # ( b &a -- )
-    name: "!",
+  "C!" => ForthDef.new( # ( b &a -- )
+    name: "C!",
     label: "STORE_AT",
     interpret: "
     PopD16
@@ -410,8 +444,8 @@ DEF_TABLE = {
   ),
 
   # Stores the short 's' at the address '&a'.
-  "!!" => ForthDef.new( # ( s &a -- )
-    name: "!!",
+  "!" => ForthDef.new( # ( s &a -- )
+    name: "!",
     label: "STORE_AT_16",
     interpret: "
     PopD16
@@ -425,22 +459,22 @@ DEF_TABLE = {
   ),
 
   # Performs 8-bit addition on the top two bytes.
-  "ADD" => ForthDef.new(
-    name: "ADD",
-    label: "ADD_FORTH",
-    interpret: "
-    PopD
-    ld h,a
-    PopD
-    add a,h
-    PushD
-    jp Next
-    "
-  ),
+  #"ADD" => ForthDef.new(
+  #  name: "ADD",
+  #  label: "ADD_FORTH",
+  #  interpret: "
+  #  PopD
+  #  ld h,a
+  #  PopD
+  #  add a,h
+  #  PushD
+  #  jp Next
+  #  "
+  #),
 
   # Performs 16-bit addition on the top two cells.
-  "ADD2" => ForthDef.new(
-    name: "ADD2",
+  "+" => ForthDef.new(
+    name: "+",
     label: "ADD_FORTH_16",
     interpret: "
     PopD16
@@ -456,15 +490,36 @@ DEF_TABLE = {
   ),
 
   # Performs 8-bit subtraction on the top two bytes.
-  "SUB" => ForthDef.new(
-    name: "SUB",
-    label: "SUB_FORTH",
+  #"SUB" => ForthDef.new(
+  #  name: "SUB",
+  #  label: "SUB_FORTH",
+  #  interpret: "
+  #  PopD
+  #  ld h,a
+  #  PopD
+  #  sub h
+  #  PushD
+  #  jp Next
+  #  "
+  #),
+  
+  "-" => ForthDef.new(
+    name: "-",
+    label: "SUB_FORTH_16",
     interpret: "
-    PopD
+    PopD16
+    push de
+    ld e,l
+    ld d,h
+    PopD16
+    ld a,l
+    sub e
+    ld l,a
+    ld a,h
+    sbc d
     ld h,a
-    PopD
-    sub h
-    PushD
+    PushD16
+    pop de
     jp Next
     "
   ),
@@ -479,9 +534,9 @@ DEF_TABLE = {
   ),
 
   # Compiles a byte to the next position pointed to by HERE.
-  "," => ForthDef.new(
-    name: ",",
-    label: "COMPILE",
+  "C," => ForthDef.new(
+    name: "C,",
+    label: "COMPILE_CHAR",
     interpret: "
     ld hl,HereValue
     ld a,[hl+]
@@ -498,6 +553,27 @@ DEF_TABLE = {
     inc hl
     ld [hl],d
     pop de
+    jp Next
+    "
+  ),
+
+  "," => ForthDef.new(
+    name: ",",
+    label: "COMPILE_CELL",
+    interpret: "
+    jp DoCol
+    DW COMPILE_CHAR
+    DW COMPILE_CHAR
+    DW QUOTE_END
+    "
+  ),
+
+  "CELLS" => ForthDef.new(
+    name: "CELLS",
+    interpret: "
+    PopD16
+    add hl,hl
+    PushD16
     jp Next
     "
   ),
@@ -661,17 +737,19 @@ DEF_TABLE = {
     name: "=",
     label: "EQUALS_FORTH",
     interpret: "
-    PopD
-    ld h,a
+    PopD16
     PopD
     xor h
     jp nz, :+
-    ld a,1
-    PushD
+    PopD
+    xor l
+    jp nz, :+
+    ld hl,1
+    PushD16
     jp Next
     :
-    ld a,0
-    PushD
+    ld hl,0
+    PushD16
     jp Next
     "
   ),
@@ -681,18 +759,22 @@ DEF_TABLE = {
     name: ">",
     label: "GREATER_FORTH",
     interpret: "
-    PopD
-    ld h,a
+    PopD16
     PopD
     cp h
     jp c, :+
-    jp z, :+
-    ld a,1
-    PushD
+    PopD
+    cp l
+    jp c, :++
+    jp z, :++
+    ld hl, 1
+    PushD16
     jp Next
     :
-    ld a,0
-    PushD
+    PopD
+    :
+    ld hl, 0
+    PushD16
     jp Next
     "
   ),
@@ -702,17 +784,21 @@ DEF_TABLE = {
     name: "<",
     label: "LESS_FORTH",
     interpret: "
-    PopD
-    ld h,a
+    PopD16
     PopD
     cp h
     jp c, :+
-    ld a,0
-    PushD
+    PopD
+    cp l
+    jp c, :++
+    ld hl, 0
+    PushD16
     jp Next
     :
-    ld a,1
-    PushD
+    PopD
+    :
+    ld hl, 1
+    PushD16
     jp Next
     "
   ),
@@ -723,18 +809,32 @@ DEF_TABLE = {
     label: "AND_FORTH",
     interpret: "
     PopD
-    ld h,a
+    or a
+    jp nz, :+
     PopD
-    cp 1
-    jp nz, :+
-    cp h
-    jp nz, :+
-    ld a,1
-    PushD
+    or a
+    jp nz, :++
+    PopD16
+    ld hl, 0
+    PushD16
     jp Next
     :
-    ld a,0
-    PushD
+    PopD
+    :
+    PopD
+    or a
+    jp nz, :+
+    PopD
+    or a
+    jp nz, :++
+    ld hl, 0
+    PushD16
+    jp Next
+    :
+    PopD
+    :
+    ld hl, 1
+    PushD16
     jp Next
     "
   ),
@@ -745,17 +845,29 @@ DEF_TABLE = {
     label: "OR_FORTH",
     interpret: "
     PopD
-    cp 1
-    jp z, :+
+    or a
+    jp nz, :+
     PopD
-    cp 1
-    jp z, :+
-    ld a,0
-    PushD
+    or a
+    jp nz, :++
+    PopD
+    or a
+    jp nz, :+++
+    PopD
+    or a
+    jp nz, :++++
+    ld hl, 0
+    PushD16
     jp Next
     :
-    ld a,1
-    PushD
+    PopD
+    :
+    PopD
+    :
+    PopD
+    :
+    ld hl, 1
+    PushD16
     jp Next
     "
   ),
@@ -766,14 +878,19 @@ DEF_TABLE = {
     label: "NOT_FORTH",
     interpret: "
     PopD
-    cp 0
+    or a
     jp nz, :+
-    ld a,1
-    PushD
+    PopD
+    or a
+    jp nz, :++
+    ld hl, 1
+    PushD16
     jp Next
     :
-    ld a,0
-    PushD
+    PopD
+    :
+    ld hl, 0
+    PushD16
     jp Next
     "
   ),
@@ -791,10 +908,16 @@ DEF_TABLE = {
     PopD16
     PopD
     or a
-    jp z,:+
+    jp nz, :+
+    PopD
+    or a
+    jp nz, :++
+    jp Next
+    :
+    PopD
+    :
     ld d,h
     ld e,l
-    :
     jp Next
     "
   ),
