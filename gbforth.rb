@@ -301,24 +301,6 @@ DEF_TABLE = {
     PushD16
     pop de
     jp Next
-
-    PopD16
-    push de
-    push bc
-    ld d,h
-    ld e,l
-    PopD16
-    ld b,h
-    ld c,l
-    ld h,d
-    ld l,e
-    PushD16
-    ld h,b
-    ld l,c
-    PushD16
-    pop bc
-    pop de
-    jp Next
     "
   ),
 
@@ -405,8 +387,8 @@ DEF_TABLE = {
     }
   ),
 
-  # Pushes the byte pointed to by '&a'.
-  "C@" => ForthDef.new( # ( &a -- b )
+  # Pushes the character pointed to by '&a'.
+  "C@" => ForthDef.new( # ( &a -- c )
     name: "C@",
     label: "LOAD_AT",
     interpret: "
@@ -417,8 +399,8 @@ DEF_TABLE = {
     "
   ),
 
-  # Pushes the short pointed to by '&a'.
-  "@" => ForthDef.new(
+  # Pushes the cell pointed to by '&a'.
+  "@" => ForthDef.new( # ( &a -- n )
     name: "@",
     label: "LOAD_AT_16",
     interpret: "
@@ -431,8 +413,8 @@ DEF_TABLE = {
     "
   ),
 
-  # Stores the byte 'b' at the address '&a'.
-  "C!" => ForthDef.new( # ( b &a -- )
+  # Stores the character 'c' at the address '&a'.
+  "C!" => ForthDef.new( # ( c &a -- )
     name: "C!",
     label: "STORE_AT",
     interpret: "
@@ -443,8 +425,8 @@ DEF_TABLE = {
     "
   ),
 
-  # Stores the short 's' at the address '&a'.
-  "!" => ForthDef.new( # ( s &a -- )
+  # Stores the cell 'n' at the address '&a'.
+  "!" => ForthDef.new( # ( n &a -- )
     name: "!",
     label: "STORE_AT_16",
     interpret: "
@@ -458,22 +440,8 @@ DEF_TABLE = {
     "
   ),
 
-  # Performs 8-bit addition on the top two bytes.
-  #"ADD" => ForthDef.new(
-  #  name: "ADD",
-  #  label: "ADD_FORTH",
-  #  interpret: "
-  #  PopD
-  #  ld h,a
-  #  PopD
-  #  add a,h
-  #  PushD
-  #  jp Next
-  #  "
-  #),
-
-  # Performs 16-bit addition on the top two cells.
-  "+" => ForthDef.new(
+  # Performs 16-bit addition on the top two cells and pushes the result.
+  "+" => ForthDef.new( # ( a b -- a+b )
     name: "+",
     label: "ADD_FORTH_16",
     interpret: "
@@ -489,21 +457,8 @@ DEF_TABLE = {
     "
   ),
 
-  # Performs 8-bit subtraction on the top two bytes.
-  #"SUB" => ForthDef.new(
-  #  name: "SUB",
-  #  label: "SUB_FORTH",
-  #  interpret: "
-  #  PopD
-  #  ld h,a
-  #  PopD
-  #  sub h
-  #  PushD
-  #  jp Next
-  #  "
-  #),
-  
-  "-" => ForthDef.new(
+  # Performs 16-bit subtraction on the top two cells and pushes the result.
+  "-" => ForthDef.new( # ( a b -- a-b )
     name: "-",
     label: "SUB_FORTH_16",
     interpret: "
@@ -533,8 +488,8 @@ DEF_TABLE = {
     "
   ),
 
-  # Compiles a byte to the next position pointed to by HERE.
-  "C," => ForthDef.new(
+  # Stores a character to the next position pointed to by HERE.
+  "C," => ForthDef.new( # ( c -- )
     name: "C,",
     label: "COMPILE_CHAR",
     interpret: "
@@ -557,7 +512,8 @@ DEF_TABLE = {
     "
   ),
 
-  "," => ForthDef.new(
+  # Stores the TOS cell to the next position pointed to by HERE.
+  "," => ForthDef.new( # ( n -- )
     name: ",",
     label: "COMPILE_CELL",
     interpret: "
@@ -568,7 +524,8 @@ DEF_TABLE = {
     "
   ),
 
-  "CELLS" => ForthDef.new(
+  # Converts cells to characters.
+  "CELLS" => ForthDef.new( # ( n -- n )
     name: "CELLS",
     interpret: "
     PopD16
@@ -579,7 +536,7 @@ DEF_TABLE = {
   ),
 
   # Advances the HERE pointer by the cell on TOS. Used to allocate memory prior to use.
-  "ALLOT" => ForthDef.new(
+  "ALLOT" => ForthDef.new( # ( n -- )
     name: "ALLOT",
     interpret: "
     jp DoCol
@@ -592,7 +549,7 @@ DEF_TABLE = {
     "
   ),
 
-  # Begins a code comment. Everything up to the nearest ')' is ignored by the compiler.
+  # Begins a code comment. Everything up to and including the nearest ')' is ignored by the compiler.
   "(" => ForthDef.new(
     name: "(",
     compile: -> (state) {
@@ -617,7 +574,7 @@ DEF_TABLE = {
   ),
 
   # Takes an address and transfers execution to it. This works on both execution tokens and quotation addresses.
-  "CALL" => ForthDef.new(
+  "CALL" => ForthDef.new( # ( xt -- ... )
     name: "CALL",
     label: "CALL_FORTH",
     interpret: "
@@ -678,7 +635,7 @@ DEF_TABLE = {
   ),
 
   # Pushes the execution token (ie. address) of the following word.
-  "'" => ForthDef.new(
+  "'" => ForthDef.new( # ( -- xt )
     name: "'",
     label: "XTOKEN",
     compile: ->(state) {
@@ -690,7 +647,7 @@ DEF_TABLE = {
   ),
 
   # Begins the definition of a new word.
-  ":" => ForthDef.new(
+  ":" => ForthDef.new( 
     name: ":",
     label: "WORD_START",
     compile: ->(state) {
@@ -732,8 +689,8 @@ DEF_TABLE = {
     "
   ),
 
-  # Tests for equality between two bytes and pushes the result. #01 for True, #00 for False
-  "=" => ForthDef.new(
+  # Tests for equality between two cells and pushes the result. #0001 for True, #0000 for False
+  "=" => ForthDef.new( # ( a b -- c )
     name: "=",
     label: "EQUALS_FORTH",
     interpret: "
@@ -755,7 +712,7 @@ DEF_TABLE = {
   ),
 
   # Tests if the first byte is greater than the second and pushes the result.
-  ">" => ForthDef.new(
+  ">" => ForthDef.new( # ( a b -- c )
     name: ">",
     label: "GREATER_FORTH",
     interpret: "
@@ -780,7 +737,7 @@ DEF_TABLE = {
   ),
 
   # Tests if the first byte is less than the second and pushes the result.
-  "<" => ForthDef.new(
+  "<" => ForthDef.new( # ( a b -- c )
     name: "<",
     label: "LESS_FORTH",
     interpret: "
@@ -803,8 +760,8 @@ DEF_TABLE = {
     "
   ),
 
-  # ANDs two boolean bytes. This is a logical AND, not a bitwise AND.
-  "AND" => ForthDef.new(
+  # ANDs two boolean cells. This is a logical AND, not a bitwise AND.
+  "AND" => ForthDef.new( # ( a b -- c )
     name: "AND",
     label: "AND_FORTH",
     interpret: "
@@ -840,7 +797,7 @@ DEF_TABLE = {
   ),
 
   # ORs two boolean bytes. This is a logical OR, not a bitwise OR.
-  "OR" => ForthDef.new(
+  "OR" => ForthDef.new( # ( a b -- c )
     name: "OR",
     label: "OR_FORTH",
     interpret: "
@@ -873,7 +830,7 @@ DEF_TABLE = {
   ),
 
   # Performs a logical NOT on a boolean byte. This is a logical NOT, not a bitwise NOT.
-  "NOT" => ForthDef.new(
+  "NOT" => ForthDef.new( # ( a -- !a )
     name: "NOT",
     label: "NOT_FORTH",
     interpret: "
@@ -897,7 +854,7 @@ DEF_TABLE = {
   
   # Takes two quotations and a boolean byte. Calls the first quotation if the byte is True,
   #   calls the second quotation if the byte is False.
-  "IF" => ForthDef.new(
+  "IF" => ForthDef.new( # ( n &a &b -- ... )
     name: "IF",
     label: "IF_FORTH",
     interpret: "
