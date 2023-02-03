@@ -823,22 +823,22 @@ class CompilerState
 
   def next_char
     @code_index += 1
-    @code_line += 1 if @code[@code_index-1] == "\n"
-    return @code[@code_index - 1]
+    @code_line += 1 if @code[@code_index - 1] == "\n"
+    @code[@code_index - 1]
   end
 
   def next_word
-    cur_char = self.next_char
-    while cur_char == " " || cur_char == "\n" || cur_char == "\t" do
-      cur_char = self.next_char
-      return nil if self.end_of_buffer
+    cur_char = next_char
+    while cur_char == " " || cur_char == "\n" || cur_char == "\t"
+      cur_char = next_char
+      return nil if end_of_buffer
     end
-    result_word = ""
-    while cur_char != " " && cur_char != "\n" && cur_char != "\t" && !self.end_of_buffer do
+    result_word = ''
+    while cur_char != ' ' && cur_char != "\n" && cur_char != "\t" && !end_of_buffer
       result_word += cur_char
-      cur_char = self.next_char
+      cur_char = next_char
     end
-    return result_word
+    result_word
   end
 
   def output(code)
@@ -853,8 +853,8 @@ class CompilerState
     abort("Error encountered near line #{@code_line}:\n    #{msg}\n")
   end
 
-  def push(v)
-    @stack.push(v)
+  def push(value)
+    @stack.push(value)
   end
 
   def pop
@@ -870,9 +870,10 @@ end
 
 def raw_compile!(compiler_state, end_token)
   output_index = compiler_state.output_code.length
-  while not compiler_state.end_of_buffer do
+  until compiler_state.end_of_buffer
     t = compiler_state.next_word
     break if t == end_token
+
     if compiler_state.definitions[t]
       compiler_state.definitions[t].execute_and_compile(compiler_state)
     elsif is_byte(t)
@@ -883,12 +884,12 @@ def raw_compile!(compiler_state, end_token)
       compiler_state.error("'#{t}' is not defined.")
     end
   end
-  compiler_state.output_code[output_index..-1]
+  compiler_state.output_code[output_index..]
 end
 
 def compile(code, def_table)
   state = CompilerState.new(code, compile: false, definitions: def_table)
-  asm_defs = ""
+  asm_defs = ''
   state.output("\nMain:\n")
   raw_compile!(state, nil)
   def_table.each_value { |d| asm_defs += d.compile_definition if d.interpret }
@@ -899,7 +900,7 @@ end
 if ARGV.length == 2 && File.exist?(ARGV[0])
   out = compile(File.open(ARGV[0], 'r').read, DEF_TABLE)
   File.open(ARGV[1], 'w').write(out)
-  puts "Compiled succesfully."
+  puts 'Compiled succesfully.'
 else
-  puts "Invalid argument."
+  puts 'Invalid argument.'
 end
