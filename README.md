@@ -20,7 +20,7 @@ the word is encountered in a source file.
 
 ## Prerequisites
 - RGBDS (I've only tested with 6.1, older versions probably work as well)
-- Ruby
+- Ruby (version 2.7+)
 
 ## Using the compiler
 `./make.sh`
