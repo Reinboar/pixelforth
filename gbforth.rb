@@ -885,11 +885,24 @@ DEF_TABLE = {
     interpret: "
     jp PAUSE
     "
-  )
+  ),
+
+  "INCLUDE\"" => ForthDef.new(
+    name: "INCLUDE\"",
+    compile: ->(state) {
+      filename = ""
+      while (c = state.next_char) != '"'
+        filename += c
+      end
+      state.error("No such file at \"#{state.include_path + filename}\"") unless File.exist?(state.include_path + filename)
+      include_file_code = File.open(state.include_path + filename, 'r').read
+      state.code.insert(state.code_index, include_file_code)
+    }
+  ),
 }
 
 class CompilerState
-  attr_accessor :comment, :string, :compile, :code, :output_code, :definitions
+  attr_accessor :comment, :string, :compile, :code, :code_index, :output_code, :definitions, :include_path
   def initialize(code, compile: false, definitions: {})
     @code = code.strip
     @output_code = ""
@@ -899,6 +912,7 @@ class CompilerState
     @stack = []
     @label_counter = 0
     @code_line = 1
+    @include_path = "./"
   end
 
   def next_char
