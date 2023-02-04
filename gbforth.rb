@@ -899,6 +899,19 @@ DEF_TABLE = {
       state.code.insert(state.code_index, include_file_code)
     }
   ),
+
+  "ASM\"" => ForthDef.new(
+     name: "ASM",
+     compile: ->(state) {
+       assembly = ""
+       while (c = state.next_char) != '"'
+         assembly += c
+       end
+       start_asm_label = state.new_label
+       end_asm_label = state.new_label
+       state.output("DW BRANCH\nDW #{end_asm_label}\n#{start_asm_label}:\n#{assembly}\n#{end_asm_label}:\nDW #{start_asm_label}\n")
+     }
+  )
 }
 
 class CompilerState
