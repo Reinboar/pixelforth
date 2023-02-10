@@ -1,5 +1,7 @@
 #!/usr/bin/ruby -- 
 
+require 'optparse'
+
 # Register specification
 # HL = general purpose / 16bit argument
 # SP = return stack pointer
@@ -994,8 +996,9 @@ def raw_compile!(compiler_state, end_token)
   compiler_state.output_code[output_index..]
 end
 
-def compile(code, def_table)
+def compile(code, def_table, include_path)
   state = CompilerState.new(code, compile: false, definitions: def_table)
+  state.include_path = include_path
   asm_defs = ''
   state.output("\nMain:\n")
   raw_compile!(state, nil)
@@ -1004,10 +1007,25 @@ def compile(code, def_table)
   PREAMBLE + asm_defs + state.output_code
 end
 
-if ARGV.length == 2 && File.exist?(ARGV[0])
-  out = compile(File.open(ARGV[0], 'r').read, DEF_TABLE)
-  File.open(ARGV[1], 'w').write(out)
+options = { include: "./" }
+OptionParser.new do |opts|
+  opts.banner = "Usage: gbforth.rb <source> [-I include_path]"
+
+  opts.on("-o", "--output OUTPUT", "Specify the output assembly source file") do |o|
+    options[:output] = o
+  end
+
+  opts.on("-I", "--include INCLUDE_PATH", "Specify the path to include source files from") do |i|
+    options[:include] = i 
+  end
+end.parse!
+
+if ARGV.length == 1 && File.exist?(ARGV[0])
+  options[:output] = File.basename(ARGV[0], ".*") + ".asm" unless options[:output]
+  out = compile(File.open(ARGV[0], 'r').read, DEF_TABLE, options[:include])
+  File.open(options[:output], 'w').write(out)
   puts 'Compiled succesfully.'
 else
   puts 'Invalid argument.'
 end
+
