@@ -993,7 +993,7 @@ def raw_compile!(compiler_state, end_token)
       compiler_state.error("'#{t}' is not defined.")
     end
   end
-  compiler_state.output_code[output_index..]
+  compiler_state.output_code[output_index..-1]
 end
 
 def compile(code, def_table, include_path)
