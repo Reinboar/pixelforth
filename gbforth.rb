@@ -559,6 +559,14 @@ DEF_TABLE = {
       end
     }),
 
+  # Begins a single-line comment. Everything up to to the next newline character is ignored by the compiler.
+  "\\" => ForthDef.new(
+    name: "\\",
+    compile: -> (state) {
+      while state.next_char != "\n" do
+      end
+    }),
+
   # Performs an unconditional jump to the address immediately following the instruction.
   # Only used by the compiler in order to jump over quotations when being defined.
   "BRANCH" => ForthDef.new(
