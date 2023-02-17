@@ -952,7 +952,19 @@ DEF_TABLE = {
        end_asm_label = state.new_label
        state.output("DW BRANCH\nDW #{end_asm_label}\n#{start_asm_label}:\n#{assembly}\n#{end_asm_label}:\nDW #{start_asm_label}\n")
      }
-  )
+  ),
+
+  "RUBY{" => ForthDef.new(
+    name: "RUBY",
+    compile: ->(state) {
+      ruby_code = ""
+      while (c = state.next_char) != '}'
+        ruby_code += c
+      end
+      eval(ruby_code)
+    }
+  ),
+      
 }
 
 class CompilerState
