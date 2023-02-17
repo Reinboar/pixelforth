@@ -545,7 +545,7 @@ DEF_TABLE = {
     "
   ),
 
-  # Advances the HERE pointer by the cell on TOS. Used to allocate memory prior to use.
+  # Advances the HERE pointer by `n` amount of bytes. Used to allocate memory prior to use.
   "ALLOT" => ForthDef.new( # ( n -- )
     name: "ALLOT",
     interpret: "
@@ -567,7 +567,7 @@ DEF_TABLE = {
       end
     }),
 
-  # Begins a single-line comment. Everything up to to the next newline character is ignored by the compiler.
+  # Begins a single-line comment. Everything up to the next newline character is ignored by the compiler.
   "\\" => ForthDef.new(
     name: "\\",
     compile: -> (state) {
