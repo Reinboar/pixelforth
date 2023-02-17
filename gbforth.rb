@@ -492,6 +492,73 @@ DEF_TABLE = {
     "
   ),
 
+  # Performs a bitwise AND between two cell operands
+  "&" => ForthDef.new( # ( a b -- a&b )
+    name: "&",
+    label: "BITWISE_AND_FORTH_16",
+    interpret: "
+    PopD16
+    PopD
+    and h
+    ld h, a
+    PopD
+    and l
+    ld l, a
+    PushD16
+    jp Next
+    "
+  ),
+
+  # Performs a bitwise OR between two cell operands
+  "|" => ForthDef.new( # ( a b -- a|b )
+    name: "|",
+    label: "BITWISE_OR_FORTH_16",
+    interpret: "
+    PopD16
+    PopD
+    or h
+    ld h, a
+    PopD
+    or l
+    ld l, a
+    PushD16
+    jp Next
+    "
+  ),
+
+  # Performs a bitwise XOR between two cell operands
+  "^" => ForthDef.new( # ( a b -- a^b )
+    name: "^",
+    label: "BITWISE_XOR_FORTH_16",
+    interpret: "
+    PopD16
+    PopD
+    xor h
+    ld h, a
+    PopD
+    xor l
+    ld l, a
+    PushD16
+    jp Next
+    "
+  ),
+
+  # Performs a bitwise NOT on a cell operand
+  "NEG" => ForthDef.new( # ( a -- a ^ FFFFh )
+    name: "NEG",
+    label: "BITWISE_NOT_FORTH_16",
+    interpret: "
+    PopD
+    cpl
+    ld h, a
+    PopD
+    cpl
+    ld l, a
+    PushD16
+    jp Next
+    "
+  ),
+
   # Pushes the address of the HERE pointer variable.
   "HERE" => ForthDef.new(
     name: "HERE",
