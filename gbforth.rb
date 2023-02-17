@@ -9,171 +9,161 @@ require 'optparse'
 # DE = IP
 # BC = data stack pointer
 
-PREAMBLE = 
+def PREAMBLE(here_offset)
 "
-INCLUDE \"hardware.inc\"
-SECTION \"Memory\",WRAM0
-  ds $100
-DataStackTop:
-  ds $100
-ReturnStackTop:
-  ds $02
-HereValue:
-  ds $02
-HereStart:
-  ds $02
+	INCLUDE \"hardware.inc\"
+	SECTION \"Memory\",WRAM0
+	  ds $100
+	DataStackTop:
+	  ds $100
+	ReturnStackTop:
+	  ds $02
+	HereValue:
+	  ds $02
+	HereStart:
+	  ds $02
 
-SECTION \"Forth\", ROM0[$100]
-  jp InitInterp
-  ds $150 - @,0
-InitInterp:
-  ld de,Main
-  ld bc,DataStackTop
-  ld sp,ReturnStackTop
-  ld hl,HereValue
-  ld a,LOW(HereStart)
-  ld [hl+],a
-  ld a,HIGH(HereStart)
-  ld [hl],a
-  jp Next
+	SECTION \"Forth\", ROM0[$100]
+	  jp InitInterp
+	  ds $150 - @,0
+	InitInterp:
+	  ld de,Main
+	  ld bc,DataStackTop
+	  ld sp,ReturnStackTop
+	  ld hl,HereValue
+	  ld a,LOW(HereStart + #{here_offset})
+	  ld [hl+],a
+	  ld a,HIGH(HereStart + #{here_offset})
+	  ld [hl],a
+	  jp Next
 
-DEF LastWord = $FFFF
+	DEF LastWord = $FFFF
 
-MACRO PushD
-  ld [bc],a
-  dec bc
-ENDM
+	MACRO PushD
+	  ld [bc],a
+	  dec bc
+	ENDM
 
-MACRO PopD
-  inc bc
-  ld a,[bc]
-ENDM
+	MACRO PopD
+	  inc bc
+	  ld a,[bc]
+	ENDM
 
-MACRO PushD16
-  ld a,l
-  ld [bc],a
-  dec bc
-  ld a,h
-  ld [bc],a
-  dec bc
-ENDM
+	MACRO PushD16
+	  ld a,l
+	  ld [bc],a
+	  dec bc
+	  ld a,h
+	  ld [bc],a
+	  dec bc
+	ENDM
 
-MACRO PopD16
-  inc bc
-  ld a,[bc]
-  ld h,a
-  inc bc
-  ld a,[bc]
-  ld l,a
-ENDM
+	MACRO PopD16
+	  inc bc
+	  ld a,[bc]
+	  ld h,a
+	  inc bc
+	  ld a,[bc]
+	  ld l,a
+	ENDM
 
-MACRO PeekD
-  inc bc
-  ld a,[bc]
-  dec bc
-ENDM
+	MACRO PeekD
+	  inc bc
+	  ld a,[bc]
+	  dec bc
+	ENDM
 
-MACRO PeekD16
-  inc bc
-  ld a, [bc]
-  ld h, a
-  inc bc
-  ld a, [bc]
-  ld l, a
-  dec bc
-  dec bc
-ENDM
+	MACRO PeekD16
+	  inc bc
+	  ld a, [bc]
+	  ld h, a
+	  inc bc
+	  ld a, [bc]
+	  ld l, a
+	  dec bc
+	  dec bc
+	ENDM
 
-MACRO PushR
-  add sp,-1
-  ld hl,sp+0
-  ld [hl],a
-ENDM
+	MACRO PushR
+	  add sp,-1
+	  ld hl,sp+0
+	  ld [hl],a
+	ENDM
 
-MACRO PopR
-  ld hl,sp+0
-  ld a,[hl]
-  add sp,1
-ENDM
+	MACRO PopR
+	  ld hl,sp+0
+	  ld a,[hl]
+	  add sp,1
+	ENDM
 
-MACRO PeekR
-  ld hl,sp
-  inc hl
-  ld a,[hl]
-ENDM
+	MACRO PeekR
+	  ld hl,sp
+	  inc hl
+	  ld a,[hl]
+	ENDM
 
-MACRO WordDef
-  :
-  DEF CurWord = :-
-  DB \\1, 0
-  DW LastWord
-  DEF LastWord = CurWord
-ENDM
+	MACRO WordDef
+	  :
+	  DEF CurWord = :-
+	  DB \\1, 0
+	  DW LastWord
+	  DEF LastWord = CurWord
+	ENDM
 
-MACRO LoadInstr
-  ld h,d
-  ld l,e
-  push de
-  ld d,[hl+]
-  ld e,[hl]
-  ld h,d
-  ld l,e
-  pop de
-ENDM
+	Next:
+	  ld h,d
+	  ld l,e
+	  inc de
+	  inc de
+	  push de
+	  ld a,[hl+]
+	  ld e,a
+	  ld d,[hl]
+	  ld h,d
+	  ld l,e
+	  pop de
+	  jp hl
 
-Next:
-  ld h,d
-  ld l,e
-  inc de
-  inc de
-  push de
-  ld a,[hl+]
-  ld e,a
-  ld d,[hl]
-  ld h,d
-  ld l,e
-  pop de
-  jp hl
+	DoConst8:
+	  inc hl
+	  inc hl
+	  inc hl
+	  ld a,[hl]
+	  PushD16
+	  jp Next
 
-DoConst8:
-  inc hl
-  inc hl
-  inc hl
-  ld a,[hl]
-  PushD16
-  jp Next
+	DoConst16:
+	  inc hl
+	  inc hl
+	  inc hl
+	  ld a,[hl+]
+	  ld h,[hl]
+	  ld l,a
+	  PushD16
+	  jp Next
 
-DoConst16:
-  inc hl
-  inc hl
-  inc hl
-  ld a,[hl+]
-  ld h,[hl]
-  ld l,a
-  PushD16
-  jp Next
+	DoVar:
+	  inc hl
+	  inc hl
+	  inc hl
+	  PushD16
+	  jp Next
 
-DoVar:
-  inc hl
-  inc hl
-  inc hl
-  PushD16
-  jp Next
+	DoCol:
+	  inc hl
+	  inc hl
+	  inc hl
+	  push de
+	  ld d,h
+	  ld e,l
+	  jp Next
 
-DoCol:
-  inc hl
-  inc hl
-  inc hl
-  push de
-  ld d,h
-  ld e,l
-  jp Next
+	EndCol:
+	  pop de
+	  jp Next
 
-EndCol:
-  pop de
-  jp Next
-
-"
+	"
+end
 
 class ForthDef
   attr_accessor :name, :label, :interpret, :compile
@@ -730,6 +720,24 @@ DEF_TABLE = {
       )  
     }
   ),
+
+  "VARIABLE:" => ForthDef.new(
+    name: "VARIABLE:",
+    compile: ->(state) {
+      var_name = state.next_word
+      var_offset = state.here_offset
+      state.here_offset += 2
+      state.definitions[var_name] = ForthDef.new(
+        name: var_name,
+	label: state.new_label,
+	compile: ->(state) {
+          state.output("DW LIT2\nDW HereStart + #{var_offset}\n")
+	}
+      )
+    }
+  ),
+
+
   # Tests for equality between two cells and pushes the result. #0001 for True, #0000 for False
   "=" => ForthDef.new( # ( a b -- c )
     name: "=",
@@ -968,11 +976,12 @@ DEF_TABLE = {
 }
 
 class CompilerState
-  attr_accessor :comment, :string, :compile, :code, :code_index, :output_code, :definitions, :include_path
+  attr_accessor :compile, :code, :code_index, :output_code, :definitions, :include_path, :here_offset
   def initialize(code, compile: false, definitions: {})
     @code = code.strip
     @output_code = ""
     @code_index = 0
+    @here_offset = 0
     @compile = compile
     @definitions = definitions
     @stack = []
@@ -1057,7 +1066,7 @@ def compile(code, def_table, include_path)
   raw_compile!(state, nil)
   def_table.each_value { |d| asm_defs += d.compile_definition if d.interpret }
   state.output("DW PAUSE\n")
-  PREAMBLE + asm_defs + state.output_code
+  PREAMBLE(state.here_offset) + asm_defs + state.output_code
 end
 
 options = { include: "./" }
