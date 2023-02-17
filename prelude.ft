@@ -1,0 +1,46 @@
+( AUDIO REGISTERS )
+
+\ Global Audio Registers
+CONSTANT: NR52 FF26h \ Sound on/off
+CONSTANT: NR51 FF25h \ Sound panning
+CONSTANT: NR50 FF24h \ Master volume
+
+\ Channel 1 Audio Registers
+CONSTANT: NR10 FF10h \ Sweep
+CONSTANT: NR11 FF11h \ Length timer and duty cycle
+CONSTANT: NR12 FF12h \ Volume and envelope
+CONSTANT: NR13 FF13h \ Wavelength Low
+CONSTANT: NR14 FF14h \ Wavelength High and control
+
+\ Channel 2 Audio Registers
+CONSTANT: NR21 FF16h \ Length timer and duty cycle
+CONSTANT: NR22 FF17h \ Volume and envelope
+CONSTANT: NR23 FF18h \ Wavelength Low
+CONSTANT: NR24 FF19h \ Wavelength High and control
+
+( JOYPAD INPUT REGISTER )
+
+CONSTANT: JOYPAD FF00h
+
+: READ-JOYPAD ( -- a )
+  ASM"
+    ld a, $10
+    ldh [$FF00], a
+    ldh a, [$FF00]
+    ldh a, [$FF00]
+    ldh a, [$FF00]
+    ldh a, [$FF00]
+    ld h, a
+    ld a, $20
+    ldh [$FF00], a
+    ldh a, [$FF00]
+    ldh a, [$FF00]
+    ldh a, [$FF00]
+    ldh a, [$FF00]
+    ld l, a
+    PushD16
+    jp Next
+  "
+;
+    
+    
