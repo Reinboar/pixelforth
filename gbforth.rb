@@ -195,6 +195,24 @@ class ForthDef
   end
 end
 
+def parse_number(token)
+  return nil if token.length < 2
+  suffix = token[-1]
+  number = token[0..-2]
+  if suffix == 'h'
+    return number
+  elsif suffix == 'o'
+    return number.to_i(8).to_s(16)
+  elsif suffix == 'd'
+    return number.to_i(10).to_s(16)
+  elsif suffix == 'b'
+    return number.to_i(2).to_s(16)
+  else
+    puts "NOT A VALID NUMBER"
+    abort(-1)
+  end
+end
+
 def is_byte (token)
   return false if !token || token.length != 3
   return false if token[0] != '#'
@@ -993,10 +1011,12 @@ def raw_compile!(compiler_state, end_token)
 
     if compiler_state.definitions[t]
       compiler_state.definitions[t].execute_and_compile(compiler_state)
-    elsif is_byte(t)
-      compiler_state.output("DW LIT\nDB $#{t[1..2]}\n")
-    elsif is_short(t)
-      compiler_state.output("DW LIT2\nDW $#{t[1..4]}\n")
+    elsif (num = parse_number(t)) != nil
+      compiler_state.output("DW LIT2\nDW $#{num}\n")
+    #elsif is_byte(t)
+    #  compiler_state.output("DW LIT\nDB $#{t[1..2]}\n")
+    #elsif is_short(t)
+    #  compiler_state.output("DW LIT2\nDW $#{t[1..4]}\n")
     else
       compiler_state.error("'#{t}' is not defined.")
     end
