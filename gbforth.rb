@@ -717,6 +717,19 @@ DEF_TABLE = {
     "
   ),
 
+  "CONSTANT:" => ForthDef.new(
+    name: "CONSTANT:",
+    compile: ->(state) {
+      const_name = state.next_word
+      const_val = parse_number(state.next_word)
+      state.definitions[const_name] = ForthDef.new(
+	name: const_name,
+	compile: ->(state) {
+          state.output("DW LIT2\nDW $#{const_val}\n")
+	}
+      )  
+    }
+  ),
   # Tests for equality between two cells and pushes the result. #0001 for True, #0000 for False
   "=" => ForthDef.new( # ( a b -- c )
     name: "=",
