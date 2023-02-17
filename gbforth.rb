@@ -405,6 +405,8 @@ DEF_TABLE = {
     PopD16
     ld a,[hl]
     PushD
+    ld a,0
+    PushD
     jp Next
     "
   ),
@@ -429,6 +431,7 @@ DEF_TABLE = {
     label: "STORE_AT",
     interpret: "
     PopD16
+    PopD
     PopD
     ld [hl],a
     jp Next
