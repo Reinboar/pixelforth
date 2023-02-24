@@ -646,7 +646,6 @@ DEF_TABLE = {
     }),
 
   # Performs an unconditional jump to the address immediately following the instruction.
-  # Only used by the compiler in order to jump over quotations when being defined.
   "BRANCH" => ForthDef.new(
     name: "BRANCH",
     interpret: "
@@ -1131,10 +1130,6 @@ def raw_compile!(compiler_state, end_token)
       compiler_state.definitions[t].execute_and_compile(compiler_state)
     elsif (num = parse_number(t)) != nil
       compiler_state.output("DW LIT2\nDW $#{num}\n")
-    #elsif is_byte(t)
-    #  compiler_state.output("DW LIT\nDB $#{t[1..2]}\n")
-    #elsif is_short(t)
-    #  compiler_state.output("DW LIT2\nDW $#{t[1..4]}\n")
     else
       compiler_state.error("'#{t}' is not defined.")
     end
