@@ -807,7 +807,6 @@ DEF_TABLE = {
     }
   ),
 
-
   # Tests for equality between two cells and pushes the result. #0001 for True, #0000 for False
   "=" => ForthDef.new( # ( a b -- c )
     name: "=",
@@ -1016,6 +1015,21 @@ DEF_TABLE = {
       state.error("No such file at \"#{state.include_path + filename}\"") unless File.exist?(state.include_path + filename)
       include_file_code = File.open(state.include_path + filename, 'r').read
       state.code.insert(state.code_index, include_file_code)
+    }
+  ),
+
+  # Compiles a binary file to ROM and passes the address and length onto the data stack.
+  "INCBIN\"" => ForthDef.new( # ( -- len addr )
+    name: "INCBIN\"",
+    compile: ->(state) {
+      filename = ""
+      while (c = state.next_char) != '"'
+        filename += c
+      end
+      state.error("No such file at \"#{state.include_path + filename}\"") unless File.exist?(state.include_path + filename)
+      bin_label = state.new_label
+      end_bin_label = state.new_label
+      state.output("DW BRANCH\nDW #{end_bin_label}\n#{bin_label}:\nINCBIN \"#{filename}\"\n#{end_bin_label}:\nDW LIT2\nDW #{end_bin_label} - #{bin_label}\nDW LIT2\nDW #{bin_label}\n")
     }
   ),
 
