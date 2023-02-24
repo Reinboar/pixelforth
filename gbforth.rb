@@ -1019,6 +1019,7 @@ DEF_TABLE = {
   ),
 
   # Compiles a binary file to ROM and passes the address and length onto the data stack.
+  # The path that is searched is dependent on RGBDS, so be sure to set its include path accordingly.
   "INCBIN\"" => ForthDef.new( # ( -- len addr )
     name: "INCBIN\"",
     compile: ->(state) {
@@ -1026,7 +1027,6 @@ DEF_TABLE = {
       while (c = state.next_char) != '"'
         filename += c
       end
-      state.error("No such file at \"#{state.include_path + filename}\"") unless File.exist?(state.include_path + filename)
       bin_label = state.new_label
       end_bin_label = state.new_label
       state.output("DW BRANCH\nDW #{end_bin_label}\n#{bin_label}:\nINCBIN \"#{filename}\"\n#{end_bin_label}:\nDW LIT2\nDW #{end_bin_label} - #{bin_label}\nDW LIT2\nDW #{bin_label}\n")
