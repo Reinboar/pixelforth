@@ -1,0 +1,98 @@
+( AUDIO REGISTERS )
+
+\ Global Audio Registers
+CONSTANT: NR52 FF26h \ Sound on/off
+CONSTANT: NR51 FF25h \ Sound panning
+CONSTANT: NR50 FF24h \ Master volume
+
+: GLOBAL-SOUND-ON  10000000b NR52 C! ;
+: GLOBAL-SOUND-OFF 00000000b NR52 C! ;
+
+\ Channel 1 Audio Registers (Square + Sweep Channel)
+CONSTANT: NR10 FF10h \ Sweep
+CONSTANT: NR11 FF11h \ Length timer and duty cycle
+CONSTANT: NR12 FF12h \ Volume and envelope
+CONSTANT: NR13 FF13h \ Wavelength Low
+CONSTANT: NR14 FF14h \ Wavelength High and control
+
+\ Channel 2 Audio Registers (Square Channel)
+CONSTANT: NR21 FF16h \ Length timer and duty cycle
+CONSTANT: NR22 FF17h \ Volume and envelope
+CONSTANT: NR23 FF18h \ Wavelength Low
+CONSTANT: NR24 FF19h \ Wavelength High and control
+
+\ Channel 3 Audio Registers (Sample Channel)
+CONSTANT: NR30 FF1Ah \ DAC enable
+CONSTANT: NR31 FF1Bh \ Length timer
+CONSTANT: NR32 FF1Ch \ Output level
+CONSTANT: NR33 FF1Dh \ Wavelength Low
+CONSTANT: NR34 FF1Eh \ Wavelength High and control
+
+CONSTANT: WAVE-RAM      FF30h \ Start of wave pattern RAM
+CONSTANT: WAVE-RAM-SIZE 0Fh \ Length of wave pattern RAM
+
+\ Channel 4 Audio Registers (Noise Channel)
+CONSTANT: NR41 FF20h \ Length timer
+CONSTANT: NR42 FF21h \ Volume and envelope
+CONSTANT: NR43 FF22h \ Frequency and randomness
+CONSTANT: NR44 FF23h \ Control
+
+( VIDEO REGISTERS )
+
+\ Tile pattern block addresses
+CONSTANT: TILE-BLOCK-1    8000h
+CONSTANT: TILE-BLOCK-2    8800h
+CONSTANT: TILE-BLOCK-3    9000h
+CONSTANT: TILE-BLOCK-SIZE 07FFh
+
+\ Tile map addresses
+CONSTANT: TILE-MAP-1    9800h
+CONSTANT: TILE-MAP-2    9C00h
+CONSTANT: TILE-MAP-SIZE 03FFh
+
+\ Screen Position Registers
+CONSTANT: SCREEN-Y FF42h
+CONSTANT: SCREEN-X FF43h
+
+\ LCD Y Line Registers
+CONSTANT: LY  FF44h
+CONSTANT: LYC FF45h
+
+\ Window Position Registers
+CONSTANT: WINDOW-Y FF4Ah
+CONSTANT: WINDOW-X FF4Bh
+
+\ Sprite Table Attributes
+CONSTANT: OAM-Y     00h
+CONSTANT: OAM-X     01h
+CONSTANT: OAM-INDEX 02h
+CONSTANT: OAM-ATTR  03h
+
+\ Sprite Table DMA Register
+CONSTANT: OAM-DMA FF46h
+
+( JOYPAD INPUT REGISTER )
+
+CONSTANT: JOYPAD FF00h
+
+: READ-JOYPAD ( -- a )
+  ASM"
+    ld a, $10
+    ldh [$FF00], a
+    ldh a, [$FF00]
+    ldh a, [$FF00]
+    ldh a, [$FF00]
+    ldh a, [$FF00]
+    ld h, a
+    ld a, $20
+    ldh [$FF00], a
+    ldh a, [$FF00]
+    ldh a, [$FF00]
+    ldh a, [$FF00]
+    ldh a, [$FF00]
+    ld l, a
+    PushD16
+    jp Next
+  "
+;
+ 
