@@ -558,6 +558,64 @@ DEF_TABLE = {
     jp Next
     "
   ),
+  
+  # Shifts `n` to the left by `bits` amount of bits
+  "<<" => ForthDef.new( # ( bits n -- n<<bits )
+    name: "<<",
+    label: "SHIFT_LEFT_FORTH",
+    interpret: "
+    push de
+    PopD16
+    PopD
+    ld d,a
+    PopD
+    ld e,a
+    :
+    ld a,e
+    cp 0
+    jr nz, :+
+    ld a, d
+    cp 0
+    jr z, :++
+    :
+    add hl,hl
+    dec de
+    jr :--
+    :
+    PushD16
+    pop de
+    jp Next
+    "
+  ),
+
+  ">>" => ForthDef.new( # ( bits n -- n>>bits )
+    name: ">>",
+    label: "SHIFT_RIGHT_FORTH",
+    interpret: "
+    push de
+    PopD16
+    PopD
+    ld d,a
+    PopD
+    ld e,a
+    :
+    ld a,e
+    cp 0
+    jr nz, :+
+    ld a, d
+    cp 0
+    jr z, :++
+    :
+    srl h
+    rr l
+    dec de
+    jr :--
+    :
+    PushD16
+    pop de
+    jp Next
+    "
+  ),
 
   # Pushes the address of the HERE pointer variable.
   "HERE" => ForthDef.new(
