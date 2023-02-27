@@ -802,7 +802,7 @@ DEF_TABLE = {
       word_def = "\njp DoCol\n" + raw_compile!(state, ';') + "DW QUOTE_END\n"
       state.definitions[word_name] = ForthDef.new(
         name: word_name,
-        label: state.new_label,
+        label: state.new_label + sanitize_label("_#{word_name}"),
         interpret: word_def
       )
       state.output_code = old_output
@@ -1072,7 +1072,7 @@ DEF_TABLE = {
     jp Next
     "
   ),
-
+  
   # Halts the system by creating an infinite loop.
   "PAUSE" => ForthDef.new(
     name: "PAUSE",
@@ -1223,6 +1223,10 @@ def compile(code, def_table, include_path)
   def_table.each_value { |d| asm_defs += d.compile_definition if d.interpret }
   state.output("DW PAUSE\n")
   PREAMBLE(state.here_offset) + asm_defs + state.output_code
+end
+
+def sanitize_label(label)
+  label.gsub(/[^A-Z0-9]/i, '_')
 end
 
 options = { include: "./" }
