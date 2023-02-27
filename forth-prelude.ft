@@ -1,0 +1,81 @@
+: ROT ( a b c -- b c a )
+  >R SWAP R> SWAP
+;
+
+: -ROT ( a b c -- c a b )
+  SWAP >R SWAP R>
+;
+
+: DIP ( a q -- ... a ) \ Removes `a`, calls `q`, then pushes `a` back to the data stack
+  SWAP >R CALL R>
+;
+
+: 2DIP ( a b q -- ... a b )
+  -ROT >R >R CALL R> R> 
+;
+
+: 3DIP ( a b c q -- ... a b c )
+  -ROT >R >R SWAP >R CALL R> R> R>
+;
+
+: KEEP ( a q -- ... a ) \ Copies `a`, calls `q`, then pushes the copy of `a` back to the data stack
+  OVER SWAP CALL
+;
+
+: 2KEEP ( a b q -- ... a b )
+  >R OVER OVER R> CALL
+;
+
+: 3KEEP ( a b c q -- ... a b c )
+  >R YONDER YONDER YONDER R> CALL
+;
+
+: BREAK
+  ASM"
+    ld b,b
+    jp Next
+  "
+;
+
+: DATA-STACK
+  ASM"
+    ld h,b
+    ld l,c
+    PushD16
+    jp Next
+  "
+;
+
+: RETURN-STACK
+  ASM"
+    ld hl,sp+0
+    PushD16
+    jp Next
+  "
+;
+
+: +! ( n a -- )
+  SWAP OVER @ + SWAP !
+;
+
+: WHILE ( q -- )
+  DUP DIP SWAP
+    [ [RECURSE] ]
+    [ DROP ]
+  IF
+;
+
+: TIMES ( n q -- )
+  OVER 00h >
+    [ 
+      SWAP 01h - SWAP
+      DUP 2DIP [RECURSE]
+    ]
+    [ DROP DROP ]
+  IF
+;
+
+: WHEN ( ? q -- )
+  [ ] IF
+;
+
