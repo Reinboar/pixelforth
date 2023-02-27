@@ -809,6 +809,25 @@ DEF_TABLE = {
     }
   ),
 
+  # Begins the definition of a new inline word. ( Compiles its definition wherever it is called )
+  "::" => ForthDef.new(
+    name: "::",
+    label: "INLINE_WORD_START",
+    compile: ->(state) {
+      old_output = state.output_code
+      state.output_code = ""
+      word_name = state.next_word
+      word_def = raw_compile!(state, ';')
+      state.definitions[word_name] = ForthDef.new(
+        name: word_name,
+        compile: ->(state) {
+          state.output(word_def)
+	}
+      )
+      state.output_code = old_output
+    }
+  ),
+
   # Begins a new quotation and pushes its address onto the stack.
   "[" => ForthDef.new(
     name: "[",
