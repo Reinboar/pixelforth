@@ -1,0 +1,34 @@
+\ Array Struct:
+\   0 : address
+\   1 : size
+
+: ARRAY-ADDR ( array -- addr )
+  @
+;
+
+: ARRAY-SIZE ( array -- size )
+  01h CELLS + @
+;
+
+: ARRAY ( size addr -- array )
+  HERE @ -ROT
+  , , 
+;
+
+:: {
+  HERE @ >R
+  DATA-STACK >R
+;
+
+:: }
+  01h 
+    DATA-STACK R> SWAP - 
+  >>
+  DUP >R
+    [ , ] 
+  TIMES
+  R> 01h -
+  R>
+  ARRAY
+;
+
