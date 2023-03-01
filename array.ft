@@ -32,3 +32,13 @@
   ARRAY
 ;
 
+: ARRAY-EACH ( array q -- )
+  OVER ARRAY-SIZE
+  ROT ARRAY-ADDR -ROT
+  [
+    2DUP SWAP @ SWAP
+    CALL
+    ROT 2DUP ! -ROT DROP
+    SWAP 01h CELLS + SWAP
+  ] TIMES
+;
