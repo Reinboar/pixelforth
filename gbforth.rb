@@ -655,10 +655,26 @@ DEF_TABLE = {
     name: ",",
     label: "COMPILE_CELL",
     interpret: "
-    jp DoCol
-    DW COMPILE_CHAR
-    DW COMPILE_CHAR
-    DW QUOTE_END
+    push de
+    PopD16
+    ld d,h
+    ld e,l
+    ld hl,HereValue
+    ld a,[hl+]
+    ld h,[hl]
+    ld l,a
+    ld a,e
+    ld [hl+],a
+    ld a,d
+    ld [hl+],a
+    ld d,h
+    ld e,l
+    ld hl,HereValue
+    ld [hl],e
+    inc hl
+    ld [hl],d
+    pop de
+    jp Next
     "
   ),
 
