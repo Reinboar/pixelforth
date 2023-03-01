@@ -2,7 +2,7 @@
 \   0 : address
 \   1 : size
 
-: ARRAY-ADDR ( array -- addr )
+:: ARRAY-ADDR ( array -- addr )
   @
 ;
 
