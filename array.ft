@@ -41,3 +41,12 @@
     SWAP 01h CELLS + SWAP
   ] TIMES
 ;
+
+: ARRAY-! ( index value array -- )
+  ARRAY-ADDR ROT CELLS + !
+;
+
+: ARRAY-@ ( index array -- value )
+  ARRAY-ADDR SWAP CELLS + @
+;
+
