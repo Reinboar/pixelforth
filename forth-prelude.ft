@@ -30,6 +30,8 @@
   >R YONDER YONDER YONDER R> CALL
 ;
 
+:: RPEEK R> DUP >R ;
+
 : BREAK
   ASM"
     ld b,b
