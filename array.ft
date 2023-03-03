@@ -15,20 +15,19 @@
   , , 
 ;
 
-:: {
+: COMPILE-TIMES [ , ] TIMES ; \ keeps the quotation out of the inline definition
+
+:: { \ array literals are created in reverse
   HERE @ >R
   DATA-STACK >R
 ;
 
 :: }
   01h 
-    DATA-STACK R> SWAP - 
+    DATA-STACK 01h CELLS + R> SWAP - 
   >>
-  DUP >R
-    [ , ] 
-  TIMES
-  R> 01h -
-  R>
+  DUP >R COMPILE-TIMES
+  R> R>
   ARRAY
 ;
 
