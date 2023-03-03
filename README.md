@@ -3,10 +3,13 @@
 ## Features
 The flavor of FORTH that this cross-compiler supports has the following features:
 - Quotations and quotation based conditional words
+- Array objects and literals
+- Ability to include binary files
+- Ability to embed compile-time Ruby and runtime GBZ80 code
 - Comments via `(` and `)`
 - Recursion
-- Constants
-- User defined words
+- Named constants and variables
+- Inline words
 
 ## Caveats
 Due to the nature of FORTH cross-compilers, it's not practically feasible to write
@@ -15,8 +18,9 @@ key named `compile` that contain a lambda that is executed at compile-time when
 the word is encountered in a source file.
 
 ## Planned features
-- Seamless manipulation of HERE at both compile-time and runtime
 - Predefined constants and words for the Gameboy hardware
+- Coroutines
+- Add commandline arguments to `make.sh`
 
 ## Prerequisites
 - RGBDS (I've only tested with 6.1, older versions probably work as well)
