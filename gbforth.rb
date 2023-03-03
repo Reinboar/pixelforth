@@ -826,6 +826,8 @@ DEF_TABLE = {
   ),
 
   # Begins the definition of a new inline word. ( Compiles its definition wherever it is called )
+  # NOTE: Inline words that generate new temporary labels directly cannot be called more than once.
+  #       In general, avoid using `[`, `INCBIN"`, and other similar words in inline words.
   "::" => ForthDef.new(
     name: "::",
     label: "INLINE_WORD_START",
