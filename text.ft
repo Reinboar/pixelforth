@@ -62,9 +62,10 @@ VARIABLE: CURSOR-Y
 : PRINT ( str -- )
   [
     DUP C@ 00h = NOT
-    [ DUP C@ 32d - AT-CURSOR! ADVANCE-CURSOR ] WHEN
+      [ DUP C@ 32d - AT-CURSOR! ADVANCE-CURSOR ]
+    WHEN
     DUP C@ 00h = NOT
-    OVER 01h + SWAP
-  ] WHILE CR
+    SWAP 01h + SWAP
+  ] WHILE CR DROP
 ;
 
