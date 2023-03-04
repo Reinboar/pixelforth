@@ -101,6 +101,11 @@ CONSTANT: SCREEN-X FF43h
 CONSTANT: LY  FF44h
 CONSTANT: LYC FF45h
 
+\ Palette Registers
+CONSTANT: BGP  FF47h \ Background palette
+CONSTANT: OBP0 FF48h \ Object palette 0
+CONSTANT: OBP1 FF49h \ Object palette 1
+
 \ Window Position Registers
 CONSTANT: WINDOW-Y FF4Ah
 CONSTANT: WINDOW-X FF4Bh
