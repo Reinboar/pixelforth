@@ -1,3 +1,5 @@
+INCLUDE" forth-prelude.ft"
+
 ( AUDIO REGISTERS )
 
 \ Global Audio Registers
