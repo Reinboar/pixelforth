@@ -131,6 +131,11 @@ CONSTANT: JOYPAD FF00h
     ldh a, [$FF00]
     ldh a, [$FF00]
     ldh a, [$FF00]
+    ldh a, [$FF00]
+    ldh a, [$FF00]
+    and $0f
+    xor $0f
+    swap a
     ld h, a
     ld a, $20
     ldh [$FF00], a
@@ -138,7 +143,13 @@ CONSTANT: JOYPAD FF00h
     ldh a, [$FF00]
     ldh a, [$FF00]
     ldh a, [$FF00]
+    ldh a, [$FF00]
+    ldh a, [$FF00]
+    and $0f
+    xor $0f
+    or h 
     ld l, a
+    ld h, $0
     PushD16
     jp Next
   "
