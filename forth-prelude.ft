@@ -30,6 +30,18 @@
   >R YONDER YONDER YONDER R> CALL
 ;
 
+: BSET ( bit n -- m )
+  SWAP 01h << |
+;
+
+: BRES ( bit n -- m )
+  SWAP 01h << FFh ^ &
+;
+
+: BGET ( bit n -- b ) 
+  SWAP 01h << &
+;
+
 :: RPEEK R> DUP >R ;
 
 : BREAK
