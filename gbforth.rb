@@ -906,9 +906,8 @@ DEF_TABLE = {
       state.here_offset += 2
       state.definitions[var_name] = ForthDef.new(
         name: var_name,
-	label: state.new_label,
 	compile: ->(state) {
-          state.output("DW LIT2\nDW HereStart + #{var_offset}\n")
+	  state.output("DW LIT2\nDW HereStart + #{var_offset}\n")
 	}
       )
     }
