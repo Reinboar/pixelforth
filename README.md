@@ -42,3 +42,5 @@ Right now the `make.sh` script is hardcoded to compile `test.ft` but
 a future commit will add commandline argument support for arbitrary
 filenames.
 
+## Credits
+The included font was created by Jeremy Oduber (@JeremyOduber on twitter) and was downloaded from [here](https://jeremyoduber.itch.io/fonts-for-gb-studio).
