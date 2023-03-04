@@ -1,0 +1,69 @@
+
+: STRCPY ( src dst -- )
+  ASM"
+    push de
+    PopD16
+    PopD
+    ld d, a
+    PopD
+    ld e, a
+    :
+    ld a,[de]
+    inc de
+    ld [hl+],a
+    cp 0
+    jr nz,:-
+    pop de
+    jp Next
+  "
+;
+
+VARIABLE: PRINT-DEST
+9800h PRINT-DEST !
+
+VARIABLE: PRINT-WIDTH
+20d PRINT-WIDTH !
+
+VARIABLE: PRINT-HEIGHT
+18d PRINT-HEIGHT !
+
+VARIABLE: CURSOR-X
+00d CURSOR-X !
+
+VARIABLE: CURSOR-Y
+00d CURSOR-Y !
+
+: AT-CURSOR! ( val -- )
+  PRINT-DEST @ CURSOR-X @ +
+  05h CURSOR-Y @ << +
+  C!
+;
+
+: SET-CURSOR! ( x y -- )
+  CURSOR-Y !
+  CURSOR-X !
+;
+
+: ADVANCE-CURSOR ( -- )
+  CURSOR-X @ 01h + DUP CURSOR-X !
+  14h < NOT
+    [ 00h CURSOR-Y @ 01h + SET-CURSOR! ] 
+  WHEN
+  CURSOR-Y @ PRINT-HEIGHT @ < NOT
+    [ 00h 00h SET-CURSOR! ]
+  WHEN
+;
+
+: CR ( -- )
+  00h CURSOR-X !
+  CURSOR-Y @ 01h + CURSOR-Y !
+;
+
+: PRINT ( str -- )
+  [
+    DUP C@ 32d - AT-CURSOR! ADVANCE-CURSOR
+    DUP C@ 00h = NOT
+    OVER 01h + SWAP
+  ] WHILE CR
+;
+
