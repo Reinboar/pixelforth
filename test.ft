@@ -1,20 +1,35 @@
-: ROT ( a b c -- b c a )
-  >R SWAP R> SWAP
-;
+INCLUDE" gb-prelude.ft"
+INCLUDE" array.ft"
+INCLUDE" text.ft"
 
-: ROT2 ( aa bb cc -- bb cc aa )
-  >R >R SWAP2 R> R> SWAP2
-;
+VARIABLE: ASCII-PATTERN
+VARIABLE: ASCII-SIZE
 
-: DIP ( b [quote] -- ... b )
-  ROT >R CALL R>
-;
+INCBIN" ascii.bin"
+ASCII-PATTERN !
+ASCII-SIZE !
 
-: DIP2 ( s [quote] -- ... s )
-  SWAP2 >R >R CALL R> R>
-;
+\ Disable LCD during VBLANK
+WAIT-VBLANK
+00h 
+  LCD-DISABLE 
+LCDC C!
 
-: WHILE ( b [pred]: { b -- ? } [body]: { -- } -- )
-  >R >R 
-;
+\ Set palette
+11111100b BGP C!
+
+\ Copy font pattern to VRAM
+ASCII-SIZE @ ASCII-PATTERN @ TILE-PATTERN-0 MEMCPY
+
+" HELLO WORLD" PRINT
+
+\ Enable LCD
+00h
+  LCD-ENABLE
+  LCD-WINDOW-DISABLE
+  LCD-BG-TILE-PATTERN-0
+  LCD-BG-TILE-MAP-0
+  LCD-OBJ-DISABLE
+  LCD-BG-WINDOW-ENABLE
+LCDC C!
 
