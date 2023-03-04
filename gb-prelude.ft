@@ -148,3 +148,33 @@ CONSTANT: JOYPAD-B      20h
 CONSTANT: JOYPAD-SELECT 40h
 CONSTANT: JOYPAD-START  80h
  
+: MEMCPY ( len src dst -- )
+  ASM"
+    push de
+    push bc
+    PopD16
+    PopD
+    ld d,a
+    PopD
+    ld e,a
+    PopD
+    ld b,a
+    PopD
+    ld c,a
+    :
+    ld a,[de]
+    inc de
+    ld [hl+],a
+    dec bc
+    ld a,c
+    cp 0
+    jr nz,:-
+    ld a,b
+    cp 0
+    jr nz,:-
+    pop bc
+    pop de
+    jp Next
+  "
+;
+
