@@ -18,6 +18,24 @@
   "
 ;
 
+: STRLEN ( str -- len )
+  ASM"
+  push de
+  ld de,$ffff
+  PopD16
+  :
+  inc de
+  ld a,[hl+]
+  cp 0
+  jr nz,:-
+  ld h,d
+  ld l,e
+  pop de
+  PushD16 
+  jp Next
+  "
+;
+
 VARIABLE: PRINT-DEST
 9800h PRINT-DEST !
 
