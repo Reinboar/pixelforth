@@ -191,6 +191,12 @@ CONSTANT: JOYPAD-START  80h
     cp 0
     jr nz,:-
     pop bc
+    inc bc
+    inc bc
+    inc bc
+    inc bc
+    inc bc
+    inc bc
     pop de
     jp Next
   "
