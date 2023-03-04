@@ -702,6 +702,19 @@ DEF_TABLE = {
     DW QUOTE_END
     "
   ),
+  # Compiles a string to ROM and pushes its address at runtime
+  '"' => ForthDef.new( # ( -- addr )
+    name: '"',
+    compile: ->(state) {
+      forth_string = ""
+      while ( c = state.next_char ) != '"' do
+        forth_string += c
+      end
+      state.output("DW BRANCH\nDW :++\n:\n")
+      state.output("DB \"#{forth_string}\", 0\n")
+      state.output(":\nDW LIT2\nDW :--\n")
+    }
+  ),
 
   # Begins a code comment. Everything up to and including the nearest ')' is ignored by the compiler.
   "(" => ForthDef.new(
