@@ -93,3 +93,16 @@
   [ ] IF
 ;
 
+\ This is VERY SLOW, do not use unless you absolutely have to
+: * ( a b -- a*b )
+  01h - OVER SWAP
+  [ SWAP DUP ROT + ] TIMES
+  SWAP DROP
+;
+
+\ This is VERY SLOW, do not use unless you absolutely have to
+: POW ( a b -- a**b )
+  01h - OVER SWAP
+  [ SWAP DUP ROT * ] TIMES
+  SWAP DROP 
+;
