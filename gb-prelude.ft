@@ -50,6 +50,49 @@ CONSTANT: TILE-MAP-1    9800h
 CONSTANT: TILE-MAP-2    9C00h
 CONSTANT: TILE-MAP-SIZE 03FFh
 
+\ LCD Control Register
+CONSTANT: LCDC FF40h
+
+: LCD-ENABLE ( n -- m ) 10000000b | ;
+: LCD-DISABLE ( n -- m ) 10000000b NEG & ;
+
+: LCD-WINDOW-TILE-MAP-0 ( n -- m ) 06h SWAP BRES ;
+: LCD-WINDOW-TILE-MAP-1 ( n -- m ) 06h SWAP BSET ; 
+
+: LCD-WINDOW-ENABLE ( n -- m ) 00100000b | ;
+: LCD-WINDOW-DISABLE ( n -- m ) 00100000b NEG & ;
+
+: LCD-BG-TILE-PATTERN-1 ( n -- m ) 04h SWAP BRES ;
+: LCD-BG-TILE-PATTERN-0 ( n -- m ) 04h SWAP BSET ;
+
+: LCD-BG-TILE-MAP-0 ( n -- m ) 03h SWAP BRES ;
+: LCD-BG-TILE-MAP-1 ( n -- m ) 03h SWAP BSET ;
+
+: LCD-OBJ-SIZE-8 ( n -- m ) 02h SWAP BRES ;
+: LCD-OBJ-SIZE-16 ( n -- m ) 02h SWAP BSET ;
+
+: LCD-OBJ-ENABLE ( n -- m ) 01h SWAP BSET ;
+: LCD-OBJ-DISABLE ( n -- m ) 01h SWAP BRES ;
+
+: LCD-BG-WINDOW-ENABLE ( n -- m ) 00h SWAP BSET ;
+: LCD-BG-WINDOW-DISABLE ( n -- m ) 00h SWAP BRES ;
+
+\ LCD Status Register
+CONSTANT: STAT FF41h
+
+: LYC=LY ( -- n ) 02h STAT C@ BGET 02h = ;
+: STAT-MODE ( -- n ) STAT C@ 03h & ;
+
+: WAIT-VBLANK ( -- )
+  ASM"
+  :
+  ld a,[rSTAT]
+  bit 0,a
+  jr z,:-
+  jp Next
+  "
+;
+
 \ Screen Position Registers
 CONSTANT: SCREEN-Y FF42h
 CONSTANT: SCREEN-X FF43h
