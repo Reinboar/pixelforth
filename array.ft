@@ -31,7 +31,7 @@
   ARRAY
 ;
 
-: ARRAY-EACH ( array q -- )
+: ARRAY-MAP! ( array q -- )
   OVER ARRAY-SIZE
   ROT ARRAY-ADDR -ROT
   [
