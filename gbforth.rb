@@ -910,6 +910,7 @@ DEF_TABLE = {
 	  state.output("DW LIT2\nDW HereStart + #{var_offset}\n")
 	}
       )
+      state.output("DW LIT2\nDW HereStart + #{var_offset}\n")
     }
   ),
 
