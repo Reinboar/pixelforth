@@ -118,13 +118,6 @@ def PREAMBLE(here_offset)
           ld l,a
 	  inc de ; de += 2
 	  inc de
-	DoConst8:
-	  inc hl
-	  inc hl
-	  inc hl
-	  ld a,[hl]
-	  PushD16
-	  jp Next
 	  jp hl ; goto hl
 
 	DoConst16:
@@ -134,13 +127,6 @@ def PREAMBLE(here_offset)
 	  ld a,[hl+]
 	  ld h,[hl]
 	  ld l,a
-	  PushD16
-	  jp Next
-
-	DoVar:
-	  inc hl
-	  inc hl
-	  inc hl
 	  PushD16
 	  jp Next
 
@@ -193,7 +179,7 @@ def parse_number(token)
   elsif suffix == 'b'
     return number.to_i(2).to_s(16)
   else
-    puts "NOT A VALID NUMBER"
+    puts "NOT A VALID NUMBER: #{token}"
     abort(-1)
   end
 end
@@ -902,10 +888,10 @@ DEF_TABLE = {
       state.definitions[var_name] = ForthDef.new(
         name: var_name,
 	compile: ->(state) {
-	  state.output("DW LIT2\nDW HereStart + #{var_offset}\n")
+	  state.output("DW LIT2\nDW HereStart+#{var_offset}\n")
 	}
       )
-      state.output("DW LIT2\nDW HereStart + #{var_offset}\n")
+      state.output("DW LIT2\nDW HereStart+#{var_offset}\n")
     }
   ),
 
