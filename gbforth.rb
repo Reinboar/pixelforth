@@ -111,19 +111,13 @@ def PREAMBLE(here_offset)
 	ENDM
 
 	Next:
-	  ld h,d
-	  ld l,e
+          ld h,d ; hl = de
+          ld l,e
+          ld a,[hl+] ; hl = mem[hl]
+          ld h,[hl]
+          ld l,a
+	  inc de ; de += 2
 	  inc de
-	  inc de
-	  push de
-	  ld a,[hl+]
-	  ld e,a
-	  ld d,[hl]
-	  ld h,d
-	  ld l,e
-	  pop de
-	  jp hl
-
 	DoConst8:
 	  inc hl
 	  inc hl
@@ -131,6 +125,7 @@ def PREAMBLE(here_offset)
 	  ld a,[hl]
 	  PushD16
 	  jp Next
+	  jp hl ; goto hl
 
 	DoConst16:
 	  inc hl
