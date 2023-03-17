@@ -906,10 +906,12 @@ DEF_TABLE = {
     jp nz, :+
     PopD
     xor l
-    jp nz, :+
+    jp nz, :++
     ld hl,1
     PushD16
     jp Next
+    :
+    PopD
     :
     ld hl,0
     PushD16
