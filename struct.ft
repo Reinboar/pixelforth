@@ -1,0 +1,7 @@
+RUBY{
+  
+  state.definitions["STRUCT"] = ForthDef.new(
+    name: "STRUCT",
+    compile: lambda (state) do
+      
+    end)
