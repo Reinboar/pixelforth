@@ -1,0 +1,150 @@
+\  q -> Quotation
+\ cr -> Coroutine
+\ rs -> Return Stack
+\ ds -> Data Stack
+
+\ Coroutine Struct:
+\   0 : status
+\   1 : quotation
+\   2 : return stack address
+\   3 : data stack address
+
+CONSTANT: CORO-STARTED 01h
+CONSTANT: CORO-STOPPED 02h
+CONSTANT: CORO-ENDED   03h
+
+HERE @ 04h CELLS ALLOT VARIABLE: COROUTINE-POOL !
+
+00h VARIABLE: CURRENT-COROUTINE !
+
+10h VARIABLE: DEFAULT-CORO-STACK-SIZE !
+
+: CORO-CREATE-STACK ( -- )
+  DEFAULT-CORO-STACK-SIZE @ CELLS ALLOT
+  HERE @
+;
+
+: COROUTINE ( q -- cr ) 
+  HERE @ SWAP
+  CORO-STOPPED ,
+  DUP ,
+  CORO-CREATE-STACK ,
+  CORO-CREATE-STACK ,
+  , 
+;
+
+: CORO-STATUS ( cr -- n )
+  
+;
+
+: CORO-QUOTE ( cr -- q )
+  01h CELLS + 
+;
+
+: CORO-RSTACK ( cr -- rs )
+  02h CELLS +  
+;
+
+: CORO-DSTACK ( cr -- ds )
+  03h CELLS + 
+;
+
+: CORO-IP ( cr -- ip )
+  04h CELLS +
+;
+
+: CORO-START! ( cr -- ) ;
+
+: CORO-STOP! ( cr -- ) ;
+
+: CORO-END! ( cr -- ) ;
+
+: CORO-YIELD! ( -- ) ;
+
+: ROTATE-CORO-POOL ( -- )
+  COROUTINE-POOL @ >R
+  COROUTINE-POOL 01h CELLS +
+  03h [
+    DUP 01h CELLS -
+    OVER @ SWAP !
+    01h CELLS +
+  ] TIMES 
+  R> SWAP 01h CELLS - !
+;
+
+: CLEAR-CORO-IF-ENDED ( -- )
+  COROUTINE-POOL @ 0000h = NOT
+  [
+    COROUTINE-POOL CORO-STATUS @ CORO-ENDED =
+    [ 0000h COROUTINE-POOL ! ] WHEN
+  ] WHEN
+;
+
+: CLEAN-CORO-POOL ( -- )
+  04h [
+    CLEAR-CORO-IF-ENDED
+    ROTATE-CORO-POOL
+  ] TIMES
+;
+
+: CORO-POOL-CURRENT-VACANT? ( -- ? )
+  COROUTINE-POOL @ 00h =
+;
+
+\ Rotates the coroutine pool until it has either searched every slot
+\ or it has found a vacant slot. In the latter case, COROUTINE-POOL @ will be vacant
+: CORO-POOL-FIND-VACANT ( -- )
+  00h
+  [ 
+    +1
+    CORO-POOL-CURRENT-VACANT? 
+      DUP NOT [ ROTATE-CORO-POOL ] WHEN
+    OVER 04h = OR NOT
+  ] WHILE DROP
+;
+
+: INSERT-CORO-POOL ( cr -- ? )
+  CORO-POOL-FIND-VACANT
+  CORO-POOL-CURRENT-VACANT? DUP
+    [ SWAP COROUTINE-POOL ! ]
+    [ SWAP DROP ]
+  IF
+;
+
+\ Swaps the first CR in the pool with the currently running CR
+: SWITCH-CRS ( -- )
+  COROUTINE-POOL @
+  0000h COROUTINE-POOL !
+  CURRENT-COROUTINE @ COROUTINE-POOL !
+  CURRENT-COROUTINE ! 
+;
+
+:: UPDATE-CURRENT-COROUTINE ( -- )
+  DATA-STACK CURRENT-COROUTINE CORO-DSTACK !
+  RETURN-STACK CURRENT-COROUTINE CORO-RSTACK !
+;
+
+: EXECUTE-CURRENT-COROUTINE ( -- )
+  CURRENT-COROUTINE CORO-DSTACK @
+  CURRENT-COROUTINE CORO-RSTACK @
+  CURRENT-COROUTINE CORO-IP @
+  ASM"
+    PopD16
+    ld d,h
+    ld e,l
+    PopD16
+    ld sp,hl
+    PopD16
+    ld b,h
+    ld c,l
+    jp Next
+  "
+;
+
+\ Swaps the first CR in the pool with the currently running CR and executes
+: SWITCH-CTX ( -- )
+  UPDATE-CURRENT-COROUTINE
+  SWITCH-CRS
+  EXECUTE-CURRENT-COROUTINE
+;
+
