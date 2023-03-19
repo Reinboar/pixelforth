@@ -202,3 +202,44 @@ CONSTANT: JOYPAD-START  80h
   "
 ;
 
+: MEMFILL ( len val dst -- )
+  ASM"
+    push de
+    push bc
+    PopD16
+    ld d,h
+    ld e,l
+    PopD
+    PopD
+    push af
+    PopD16
+    ld b,h
+    ld c,l
+    ld h,d
+    ld l,e
+    pop af 
+    :
+    ld b,b
+    ld [hl+],a
+    dec bc
+    ld e,a
+    ld a,c
+    cp 0
+    ld a,e
+    jr nz,:-
+    ld e,a
+    ld a,b
+    cp 0
+    ld a,e
+    jr nz,:-
+    pop bc
+    inc bc
+    inc bc
+    inc bc
+    inc bc
+    inc bc
+    inc bc
+    pop de
+    jp Next
+  "
+;
