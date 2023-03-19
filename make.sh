@@ -1,6 +1,8 @@
 #!/bin/sh
-ruby gbforth.rb test.ft -o test.asm &&
-  rgbasm -l test.asm -o test.o &&
-  rgblink test.o -o test.gb -n test.sym &&
-  rgbfix -f lhg test.gb
+filename="$(dirname $1)/$(basename -s .ft $1)"
+
+ruby gbforth.rb $filename.ft -o "$filename".asm &&
+  rgbasm -l "$filename".asm -o "$filename".o &&
+  rgblink $filename.o -o $filename.gb -n $filename.sym &&
+  rgbfix -f lhg $filename.gb
 
