@@ -617,6 +617,7 @@ DEF_TABLE = {
     ld h,[hl]
     ld l,a
     PopD
+    PopD
     ld [hl],a
     inc hl
     push de
