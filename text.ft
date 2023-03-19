@@ -93,3 +93,23 @@ VARIABLE: ASCII-SIZE !
   ] WHILE CR DROP
 ;
 
+: NYBBLE-TO-CHAR ( n -- c )
+  DUP 0Fh & 09h > 
+    [ 37h + ]
+    [ 30h + ]
+  IF
+;
+
+: NUM-TO-STR ( n -- str )
+  HERE @ SWAP
+  DUP F000h & 12d SWAP >> NYBBLE-TO-CHAR C,
+  DUP 0F00h &  8d SWAP >> NYBBLE-TO-CHAR C,
+  DUP 00F0h &  4d SWAP >> NYBBLE-TO-CHAR C,
+  000Fh & NYBBLE-TO-CHAR C,
+  00h C,
+;
+
+: PRINT-CHAR ( c -- )
+  AT-CURSOR! ADVANCE-CURSOR
+;
+
