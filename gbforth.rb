@@ -1092,7 +1092,7 @@ DEF_TABLE = {
   "PAUSE" => ForthDef.new(
     name: "PAUSE",
     interpret: "
-    jp PAUSE
+    jr PAUSE
     "
   ),
 
