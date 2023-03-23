@@ -1137,11 +1137,11 @@ DEF_TABLE = {
      }
   ),
 
-  "RUBY{" => ForthDef.new(
+  "RUBY`" => ForthDef.new(
     name: "RUBY",
     compile: ->(state) {
       ruby_code = ""
-      while (c = state.next_char) != '}'
+      while (c = state.next_char) != '`'
         ruby_code += c
       end
       eval(ruby_code)
