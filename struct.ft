@@ -1,7 +1,49 @@
-RUBY{
-  
+RUBY`
   state.definitions["STRUCT"] = ForthDef.new(
     name: "STRUCT",
-    compile: lambda (state) do
-      
+    compile: lambda do |state|
+      new_struct = { name: state.next_word, members: [] }
+      state.push(new_struct)
     end)
+
+  state.definitions["MEMBER:"] = ForthDef.new(
+    name: "MEMBER:",
+    compile: lambda do |state|
+      struct = state.pop
+      struct[:members].push(struct[:name] + "-" + state.next_word)
+      state.push(struct)
+    end)
+
+  state.definitions["ENDSTRUCT"] = ForthDef.new(
+    name: "ENDSTRUCT",
+    compile: lambda do |state|
+      struct = state.pop
+      struct_word_name = "CREATE-" + struct[:name]
+      state.definitions[struct_word_name] = ForthDef.new(
+        name: struct_word_name,
+        label: state.new_label+sanitize_label(struct_word_name),
+        interpret: "
+          jp DoCol
+          DW HERE
+          DW LOAD_AT_16
+          DW LIT2
+          DW #{struct[:members].size*2}
+          DW ALLOT
+          DW QUOTE_END
+        ")
+      struct[:members].each_with_index do |m,i|
+        state.definitions[m] = ForthDef.new(
+          name: m,
+          label: state.new_label+sanitize_label(m),
+          interpret: "
+            jp DoCol
+            DW LIT2
+            DW #{i*2}
+            DW ADD_FORTH_16
+            DW QUOTE_END
+          "
+        )
+      end
+    end)
+`
+
