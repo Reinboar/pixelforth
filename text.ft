@@ -35,6 +35,18 @@
   "
 ;
 
+INCBIN" ascii.bin"
+VARIABLE: ASCII-PATTERN !
+VARIABLE: ASCII-SIZE !
+
+: LOAD-FONT ( -- )
+  ASCII-SIZE @ ASCII-PATTERN @ TILE-PATTERN-0 MEMCPY
+;
+
+: CLEAR-SCREEN ( -- )
+  0800h 00h 9800h MEMFILL
+;
+
 9800h VARIABLE: PRINT-DEST !
 
 20d VARIABLE: PRINT-WIDTH !
@@ -79,5 +91,25 @@
     DUP C@ 00h = NOT
     SWAP 01h + SWAP
   ] WHILE CR DROP
+;
+
+: NYBBLE-TO-CHAR ( n -- c )
+  DUP 0Fh & 09h > 
+    [ 37h + ]
+    [ 30h + ]
+  IF
+;
+
+: NUM-TO-STR ( n -- str )
+  HERE @ SWAP
+  DUP F000h & 12d SWAP >> NYBBLE-TO-CHAR C,
+  DUP 0F00h &  8d SWAP >> NYBBLE-TO-CHAR C,
+  DUP 00F0h &  4d SWAP >> NYBBLE-TO-CHAR C,
+  000Fh & NYBBLE-TO-CHAR C,
+  00h C,
+;
+
+: PRINT-CHAR ( c -- )
+  AT-CURSOR! ADVANCE-CURSOR
 ;
 

@@ -617,6 +617,7 @@ DEF_TABLE = {
     ld h,[hl]
     ld l,a
     PopD
+    PopD
     ld [hl],a
     inc hl
     push de
@@ -1091,7 +1092,7 @@ DEF_TABLE = {
   "PAUSE" => ForthDef.new(
     name: "PAUSE",
     interpret: "
-    jp PAUSE
+    jr PAUSE
     "
   ),
 
@@ -1136,11 +1137,11 @@ DEF_TABLE = {
      }
   ),
 
-  "RUBY{" => ForthDef.new(
+  "RUBY`" => ForthDef.new(
     name: "RUBY",
     compile: ->(state) {
       ruby_code = ""
-      while (c = state.next_char) != '}'
+      while (c = state.next_char) != '`'
         ruby_code += c
       end
       eval(ruby_code)

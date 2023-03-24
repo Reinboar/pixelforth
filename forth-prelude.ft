@@ -76,6 +76,41 @@
   "
 ;
 
+: INTERP-PTR
+  ASM"
+    ld h,d
+    ld l,e
+    PushD16
+    jp Next
+  "
+;
+
+: DATA-STACK! ( n -- )
+  ASM"
+    PopD16
+    ld b, h
+    ld c, l
+    jp Next
+  "
+;
+
+: RETURN-STACK! ( n -- )
+  ASM"
+    PopD16
+    ld sp,hl
+    jp Next
+  "
+;
+
+: INTERP-PTR! ( n -- )
+  ASM"
+    PopD16
+    ld d,h
+    ld e,l
+    jp Next
+  "
+;
+
 : +! ( n a -- )
   SWAP OVER @ + SWAP !
 ;

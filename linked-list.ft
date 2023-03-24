@@ -1,0 +1,47 @@
+: LLIST ( val link -- ll )
+  HERE @ -ROT
+  , ,
+;
+
+: CREATE-LLIST ( -- ll )
+  00h 00h LLIST
+;
+
+: LLIST-VALUE ( ll -- val )
+  01h CELLS + @
+;
+
+:: LLIST-LINK ( ll -- link )
+  @ 
+;
+
+:: LLIST-SET-LINK! ( link ll -- )
+  !
+;
+
+: LLIST-SET-VALUE! ( val ll -- )
+  01h CELLS + !
+;
+
+: LLIST-ADD ( val lla -- llb )
+  SWAP 00h LLIST
+  DUP ROT LLIST-SET-LINK!
+;
+
+: LLIST-SIZE ( ll -- len ) \ BROKEN
+  01h
+  [ 
+    OVER LLIST-LINK 00h = NOT DUP -ROT
+      [ 01h + SWAP LLIST-LINK SWAP ]
+    WHEN ROT
+  ] WHILE NIP
+;
+
+: LLIST-MAP! ( ll q -- )
+  [ 
+    OVER LLIST-VALUE OVER CALL
+    ROT 2DUP LLIST-SET-VALUE! -ROT DROP
+    SWAP LLIST-LINK SWAP 
+    OVER 00h = NOT
+  ] WHILE 2DROP
+; 
