@@ -219,7 +219,6 @@ CONSTANT: JOYPAD-START  80h
     ld l,e
     pop af 
     :
-    ld b,b
     ld [hl+],a
     dec bc
     ld e,a
