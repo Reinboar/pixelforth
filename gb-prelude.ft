@@ -112,14 +112,109 @@ CONSTANT: OBP1 FF49h \ Object palette 1
 CONSTANT: WINDOW-Y FF4Ah
 CONSTANT: WINDOW-X FF4Bh
 
-\ Sprite Table Attributes
-CONSTANT: OAM-Y     00h
-CONSTANT: OAM-X     01h
-CONSTANT: OAM-INDEX 02h
-CONSTANT: OAM-ATTR  03h
-
 \ Sprite Table DMA Register
 CONSTANT: OAM-DMA FF46h
+
+: OAM-ENTRY ( index buffer -- addr )
+  02h ROT << +
+;
+
+:: OAM-Y ( addr -- y )
+  
+;
+
+: OAM-X ( addr -- x )
+  01h +
+;
+
+: OAM-TILE ( addr -- tile )
+  02h +
+;
+
+: OAM-ATTR ( addr -- attr )
+  03h +
+;
+
+: OAM-X-FLIP ( addr -- )
+  OAM-ATTR DUP @
+  05h SWAP BSET
+  SWAP C!
+;
+
+: OAM-X-UNFLIP ( addr -- )
+  OAM-ATTR DUP @
+  05h SWAP BRES
+  SWAP C!
+;
+
+: OAM-Y-FLIP ( addr -- )
+  OAM-ATTR DUP @
+  06h SWAP BSET
+  SWAP C!
+;
+
+: OAM-Y-UNFLIP ( addr -- )
+  OAM-ATTR DUP @
+  06h SWAP BRES
+  SWAP C!
+;
+
+: OAM-PRIORITY ( priority addr -- ) \ 0 = OAM on top, 1 = OAM on bottom
+  OAM-ATTR DUP @ ROT
+    [ 07h SWAP BSET ]
+    [ 07h SWAP BRES ]
+  IF
+  SWAP C!
+;
+
+: OAM-PALETTE ( palette addr -- ) \ 0 = OBP0, 1 = OBP1
+  OAM-ATTR DUP @ ROT
+    [ 04h SWAP BSET ]
+    [ 04h SWAP BRES ]
+  IF
+  SWAP C!
+;
+
+: CREATE-OAM-BUFFER ( -- addr )
+  HERE @ 0100h + FF00h & HERE ! \ Aligns HERE to 256 bytes
+  HERE @
+  100h ALLOT
+;
+
+: START-OAM-DMA ( addr -- )
+  08h SWAP >>
+  ASM"
+      push de
+      push bc
+      ld hl, run_dma
+      ld c, run_dma_end-run_dma
+      ld de, $FF80
+      :
+      ld a, [hl+]
+      ld [de], a
+      inc de
+      dec c
+      jr nz, :-
+      pop bc
+      pop de
+      :
+      ld a,[rLY]
+      cp 144
+      jr nz,:-
+      PopD
+      PopD 
+      call $FF80
+      jp Next
+    run_dma:
+      ldh [$FF46], a
+      ld a, 40
+    .wait:
+      dec a
+      jr nz, .wait
+      ret
+    run_dma_end:
+  " 
+;
 
 ( JOYPAD INPUT REGISTER )
 
@@ -165,7 +260,7 @@ CONSTANT: JOYPAD-A      10h
 CONSTANT: JOYPAD-B      20h
 CONSTANT: JOYPAD-SELECT 40h
 CONSTANT: JOYPAD-START  80h
- 
+
 : MEMCPY ( len src dst -- )
   ASM"
     push de
