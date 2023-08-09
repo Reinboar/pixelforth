@@ -102,14 +102,6 @@ def PREAMBLE(here_offset)
 	  ld a,[hl]
 	ENDM
 
-	MACRO WordDef
-	  :
-	  DEF CurWord = :-
-	  DB \\1, 0
-	  DW LastWord
-	  DEF LastWord = CurWord
-	ENDM
-
 	Next:
           ld h,d ; hl = de
           ld l,e
@@ -156,8 +148,7 @@ class ForthDef
   end
 
   def compile_definition
-    "  WordDef \"#{@name}\"
-    #{@label}:#{@interpret}\n" if @interpret
+    "#{@label}:#{@interpret}\n" if @interpret
   end
 
   def execute_and_compile(state)
