@@ -1094,8 +1094,9 @@ DEF_TABLE = {
       while (c = state.next_char) != '"'
         filename += c
       end
-      state.error("No such file at \"#{state.include_path + filename}\"") unless File.exist?(state.include_path + filename)
-      include_file_code = File.open(state.include_path + filename, 'r').read
+      full_filepath = state.in_include_path?(filename)
+      state.error("File could not be found: \"#{filename}\"") unless full_filepath
+      include_file_code = File.open(full_filepath).read
       state.code.insert(state.code_index, include_file_code)
     }
   ),
@@ -1153,7 +1154,7 @@ DEF_TABLE = {
 }
 
 class CompilerState
-  attr_accessor :compile, :code, :code_index, :output_code, :definitions, :include_path, :here_offset
+  attr_accessor :compile, :code, :code_index, :output_code, :definitions, :include_paths, :here_offset
   def initialize(code, compile: false, definitions: {})
     @code = code.strip
     @output_code = ""
@@ -1164,7 +1165,7 @@ class CompilerState
     @stack = []
     @label_counter = 0
     @code_line = 1
-    @include_path = "./"
+    @include_paths = ["./"]
   end
 
   def next_char
@@ -1212,6 +1213,13 @@ class CompilerState
     @label_counter += 1
     label
   end
+
+  def in_include_path?(filename)
+    @include_paths.each do |i|
+      return i + '/' + filename if File.exist?(i + '/' + filename)
+    end
+    false
+  end
 end
 
 def raw_compile!(compiler_state, end_token)
@@ -1231,9 +1239,9 @@ def raw_compile!(compiler_state, end_token)
   compiler_state.output_code[output_index..-1]
 end
 
-def compile(code, def_table, include_path)
+def compile(code, def_table, include_paths)
   state = CompilerState.new(code, compile: false, definitions: def_table)
-  state.include_path = include_path
+  state.include_paths = include_paths
   asm_defs = ''
   state.output("\nMain:\n")
   raw_compile!(state, nil)
@@ -1246,7 +1254,7 @@ def sanitize_label(label)
   label.gsub(/[^A-Z0-9]/i, '_')
 end
 
-options = { include: "./" }
+options = { include: ["./"] }
 OptionParser.new do |opts|
   opts.banner = "Usage: gbforth.rb <source> [-I include_path]"
 
@@ -1255,7 +1263,7 @@ OptionParser.new do |opts|
   end
 
   opts.on("-I", "--include INCLUDE_PATH", "Specify the path to include source files from") do |i|
-    options[:include] = i 
+    options[:include].unshift(i)
   end
 end.parse!
 
