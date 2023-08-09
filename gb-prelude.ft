@@ -86,13 +86,13 @@ CONSTANT: STAT FF41h
 : STAT-MODE ( -- n ) STAT C@ 03h & ;
 
 : WAIT-VBLANK ( -- )
-  ASM"
+  ASM`
   :
   ld a,[rLY]
   cp $90
   jr nz,:-
   jp Next
-  "
+  `
 ;
 
 \ Screen Position Registers
@@ -183,7 +183,7 @@ CONSTANT: OAM-DMA FF46h
 
 : START-OAM-DMA ( addr -- )
   08h SWAP >>
-  ASM"
+  ASM`
       push de
       push bc
       ld hl, run_dma
@@ -213,7 +213,7 @@ CONSTANT: OAM-DMA FF46h
       jr nz, .wait
       ret
     run_dma_end:
-  " 
+  `
 ;
 
 ( JOYPAD INPUT REGISTER )
@@ -221,7 +221,7 @@ CONSTANT: OAM-DMA FF46h
 CONSTANT: JOYPAD FF00h
 
 : READ-JOYPAD ( -- a )
-  ASM"
+  ASM`
     ld a, $10
     ldh [$FF00], a
     ldh a, [$FF00]
@@ -249,7 +249,7 @@ CONSTANT: JOYPAD FF00h
     ld h, $0
     PushD16
     jp Next
-  "
+  `
 ;
 
 CONSTANT: JOYPAD-RIGHT  01h
@@ -262,18 +262,22 @@ CONSTANT: JOYPAD-SELECT 40h
 CONSTANT: JOYPAD-START  80h
 
 : MEMCPY ( len src dst -- )
-  ASM"
+  ASM`
     push de
     push bc
     PopD16
+    push hl
     PopD
     ld d,a
     PopD
     ld e,a
     PopD
-    ld b,a
+    ld h,a
     PopD
-    ld c,a
+    ld l,a
+    ld b,h
+    ld c,l
+    pop hl
     :
     ld a,[de]
     inc de
@@ -294,11 +298,11 @@ CONSTANT: JOYPAD-START  80h
     inc bc
     pop de
     jp Next
-  "
+  `
 ;
 
 : MEMFILL ( len val dst -- )
-  ASM"
+  ASM`
     push de
     push bc
     PopD16
@@ -335,5 +339,5 @@ CONSTANT: JOYPAD-START  80h
     inc bc
     pop de
     jp Next
-  "
+  `
 ;
