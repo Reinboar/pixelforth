@@ -5,6 +5,26 @@ INCBIN" examples/pong/pong_tiles.bin"
 VARIABLE: PONG-TILES !
 VARIABLE: PONG-SIZE !
 
+INCBIN" examples/pong/score_tiles.bin"
+VARIABLE: SCORE-TILES !
+VARIABLE: SCORE-SIZE !
+
+INCBIN" examples/pong/pong_title_bg.bin"
+VARIABLE: TITLE-BG-TILES !
+VARIABLE: TITLE-BG-TILES-SIZE !
+
+INCBIN" examples/pong/pong_title_bg_map.bin"
+VARIABLE: TITLE-BG-MAP !
+VARIABLE: TITLE-BG-MAP-SIZE !
+
+INCBIN" examples/pong/pong_title_fg.bin"
+VARIABLE: TITLE-FG-TILES !
+VARIABLE: TITLE-FG-TILES-SIZE !
+
+INCBIN" examples/pong/pong_title_fg_map.bin"
+VARIABLE: TITLE-FG-MAP !
+VARIABLE: TITLE-FG-MAP-SIZE !
+
 : SCREEN-OFF
   WAIT-VBLANK
   00h
