@@ -1,5 +1,5 @@
 : STRCPY ( src dst -- )
-  ASM"
+  ASM`
     push de
     PopD16
     PopD
@@ -14,11 +14,11 @@
     jr nz,:-
     pop de
     jp Next
-  "
+  `
 ;
 
 : STRLEN ( str -- len )
-  ASM"
+  ASM`
   push de
   ld de,$ffff
   PopD16
@@ -32,7 +32,7 @@
   pop de
   PushD16 
   jp Next
-  "
+  `
 ;
 
 INCBIN" ascii.bin"
