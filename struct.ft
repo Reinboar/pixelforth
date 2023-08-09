@@ -32,14 +32,28 @@ RUBY`
           DW QUOTE_END
         ")
       struct[:members].each_with_index do |m,i|
-        state.definitions[m] = ForthDef.new(
-          name: m,
-          label: state.new_label+sanitize_label(m),
+        state.definitions[m+"@"] = ForthDef.new(
+          name: m+"@",
+          label: state.new_label+sanitize_label(m+"@"),
           interpret: "
             jp DoCol
             DW LIT2
             DW #{i*2}
             DW ADD_FORTH_16
+            DW LOAD_AT_16
+            DW QUOTE_END
+          "
+        )
+
+        state.definitions[m+"!"] = ForthDef.new(
+          name: m+"!",
+          label: state.new_label+sanitize_label(m+"!"),
+          interpret: "
+            jp DoCol
+            DW LIT2
+            DW #{i*2}
+            DW ADD_FORTH_16
+            DW STORE_AT_16
             DW QUOTE_END
           "
         )

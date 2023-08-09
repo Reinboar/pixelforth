@@ -102,14 +102,6 @@ def PREAMBLE(here_offset)
 	  ld a,[hl]
 	ENDM
 
-	MACRO WordDef
-	  :
-	  DEF CurWord = :-
-	  DB \\1, 0
-	  DW LastWord
-	  DEF LastWord = CurWord
-	ENDM
-
 	Next:
           ld h,d ; hl = de
           ld l,e
@@ -156,8 +148,7 @@ class ForthDef
   end
 
   def compile_definition
-    "  WordDef \"#{@name}\"
-    #{@label}:#{@interpret}\n" if @interpret
+    "#{@label}:#{@interpret}\n" if @interpret
   end
 
   def execute_and_compile(state)
@@ -1124,11 +1115,11 @@ DEF_TABLE = {
     }
   ),
 
-  "ASM\"" => ForthDef.new(
+  "ASM`" => ForthDef.new(
      name: "ASM",
      compile: ->(state) {
        assembly = ""
-       while (c = state.next_char) != '"'
+       while (c = state.next_char) != '`'
          assembly += c
        end
        start_asm_label = state.new_label
@@ -1147,6 +1138,17 @@ DEF_TABLE = {
       eval(ruby_code)
     }
   ),
+
+  "DEBUG\"" => ForthDef.new(
+    name: "DEBUG\"",
+    compile: ->(state) {
+      debug_msg = ""
+      while ( c = state.next_char ) != '"'
+        debug_msg += c
+      end
+      state.output("DW BRANCH\nDW :+++\n:\nld d,d\njr :+\nDW $6464\nDW $0000\nDB \"#{debug_msg}\", 0\n:\njp Next\n:\nDW :---\n")
+    }
+  )
       
 }
 

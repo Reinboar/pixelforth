@@ -53,62 +53,62 @@
 :: RPEEK R> DUP >R ;
 
 : BREAK
-  ASM"
+  ASM`
     ld b,b
     jp Next
-  "
+  `
 ;
 
 : DATA-STACK
-  ASM"
+  ASM`
     ld h,b
     ld l,c
     PushD16
     jp Next
-  "
+  `
 ;
 
 : RETURN-STACK
-  ASM"
+  ASM`
     ld hl,sp+0
     PushD16
     jp Next
-  "
+  `
 ;
 
 : INTERP-PTR
-  ASM"
+  ASM`
     ld h,d
     ld l,e
     PushD16
     jp Next
-  "
+  `
 ;
 
 : DATA-STACK! ( n -- )
-  ASM"
+  ASM`
     PopD16
     ld b, h
     ld c, l
     jp Next
-  "
+  `
 ;
 
 : RETURN-STACK! ( n -- )
-  ASM"
+  ASM`
     PopD16
     ld sp,hl
     jp Next
-  "
+  `
 ;
 
 : INTERP-PTR! ( n -- )
-  ASM"
+  ASM`
     PopD16
     ld d,h
     ld e,l
     jp Next
-  "
+  `
 ;
 
 : +! ( n a -- )
