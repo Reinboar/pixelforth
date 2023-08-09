@@ -1115,11 +1115,11 @@ DEF_TABLE = {
     }
   ),
 
-  "ASM\"" => ForthDef.new(
+  "ASM`" => ForthDef.new(
      name: "ASM",
      compile: ->(state) {
        assembly = ""
-       while (c = state.next_char) != '"'
+       while (c = state.next_char) != '`'
          assembly += c
        end
        start_asm_label = state.new_label
