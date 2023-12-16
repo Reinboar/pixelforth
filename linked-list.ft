@@ -1,47 +1,34 @@
-: LLIST ( val link -- ll )
-  HERE @ -ROT
-  , ,
+
+STRUCT LINKED-NODE
+  MEMBER: VALUE
+  MEMBER: NEXT
+ENDSTRUCT
+
+: NEW-LINKED-NODE ( value next -- node )
+  CREATE-LINKED-NODE
+  LOCALS{ VALUE NEXT NEW-NODE }
+    VALUE NEW-NODE LINKED-NODE-VALUE!
+    NEXT NEW-NODE LINKED-NODE-NEXT!
+    NEW-NODE
+  END-LOCALS
 ;
 
-: CREATE-LLIST ( -- ll )
-  00h 00h LLIST
+: LINK-NODE ( value node -- new-node )
+  CREATE-LINKED-NODE
+  LOCALS{ VALUE PREV-NODE NEW-NODE }
+    VALUE NEW-NODE LINKED-NODE-VALUE!
+    00h NEW-NODE LINKED-NODE-NEXT!
+    NEW-NODE PREV-NODE LINKED-NODE-NEXT!
+    NEW-NODE
+  END-LOCALS
 ;
 
-: LLIST-VALUE ( ll -- val )
-  01h CELLS + @
+: MAP-LIST ( list quote -- )
+  LOCALS{ LIST Q }
+    LIST LINKED-NODE-VALUE@                  \ Push value to make it available to the quote
+    Q CALL
+    LIST LINKED-NODE-NEXT@ 00h = NOT BREAK   \ Check if this is not the last node in the list
+      [ LIST LINKED-NODE-NEXT@ Q [RECURSE] ] \ Push the next node and recurse MAP-LIST
+    WHEN
+  END-LOCALS
 ;
-
-:: LLIST-LINK ( ll -- link )
-  @ 
-;
-
-:: LLIST-SET-LINK! ( link ll -- )
-  !
-;
-
-: LLIST-SET-VALUE! ( val ll -- )
-  01h CELLS + !
-;
-
-: LLIST-ADD ( val lla -- llb )
-  SWAP 00h LLIST
-  DUP ROT LLIST-SET-LINK!
-;
-
-: LLIST-SIZE ( ll -- len ) \ BROKEN
-  01h
-  [ 
-    OVER LLIST-LINK 00h = NOT DUP -ROT
-      [ 01h + SWAP LLIST-LINK SWAP ]
-    WHEN ROT
-  ] WHILE NIP
-;
-
-: LLIST-MAP! ( ll q -- )
-  [ 
-    OVER LLIST-VALUE OVER CALL
-    ROT 2DUP LLIST-SET-VALUE! -ROT DROP
-    SWAP LLIST-LINK SWAP 
-    OVER 00h = NOT
-  ] WHILE 2DROP
-; 
