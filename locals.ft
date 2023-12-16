@@ -1,0 +1,56 @@
+INCLUDE" stack.ft"
+
+40h NEW-STACK VARIABLE: LOCALS-STACK !
+
+RUBY`
+  state.definitions["LOCALS{"] = ForthDef.new(
+    name: "LOCALS{",
+    compile: lambda do |state|
+      locals_stack_label = state.definitions["LOCALS-STACK"].compile
+      stack_pick_label = state.definitions["STACK-PICK"].label
+      stack_push_label = state.definitions["STACK-PUSH"].label
+      local_def_names = []
+      while (nw = state.next_word) != "}" do
+        local_def_names.push(nw)
+      end
+
+      local_def_names.each.with_index do |l,i|
+        state.definitions[l] = ForthDef.new(
+          name: l,
+          compile: lambda do |state|
+            state.output("
+            DW LIT2
+            DW #{i+1}\n")
+            locals_stack_label.call(state)
+            state.output("
+            DW LOAD_AT_16
+            DW #{stack_pick_label}
+            ")
+          end
+        )
+      end
+
+      local_def_names.size.times do |i|
+        locals_stack_label.call(state)
+        state.output("DW LOAD_AT_16\nDW #{stack_push_label}\n")
+      end
+
+      state.push(local_def_names.size)
+    end
+  )
+
+  state.definitions["END-LOCALS"] = ForthDef.new(
+    name: "END-LOCALS",
+    compile: lambda do |state|
+      locals_stack_label = state.definitions["LOCALS-STACK"].compile
+      stack_shrink_label = state.definitions["STACK-SHRINK"].label
+      num_locals = state.pop
+      locals_stack_label.call(state)
+      state.output("DW LOAD_AT_16\n")
+      num_locals.times do |i|
+        state.output("DW DUP\nDW #{stack_shrink_label}\n")
+      end
+      state.output("DW DROP\n")
+    end
+  )
+`
