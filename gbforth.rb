@@ -103,11 +103,11 @@ def PREAMBLE(here_offset)
 	ENDM
 
 	Next:
-          ld h,d ; hl = de
-          ld l,e
-          ld a,[hl+] ; hl = mem[hl]
-          ld h,[hl]
-          ld l,a
+    ld h,d ; hl = de
+    ld l,e
+    ld a,[hl+] ; hl = mem[hl]
+    ld h,[hl]
+    ld l,a
 	  inc de ; de += 2
 	  inc de
 	  jp hl ; goto hl
@@ -733,6 +733,27 @@ DEF_TABLE = {
     "
   ),
 
+  # Exits a word or quotation early.
+  "EXIT" => ForthDef.new( # ( -- )
+    name: "EXIT",
+    label: "EXIT_FORTH",
+    interpret: "
+    pop de
+    jp Next
+    "
+  ),
+
+  # Exits out of a parent word or quotation, from inside a child word or quotation.
+  "[EXIT]" => ForthDef.new( # ( -- )
+    name: "[EXIT]",
+    label: "QUOTE_EXIT_FORTH",
+    interpret: "
+    pop de
+    pop de
+    jp Next
+    "
+  ),
+
   # Causes execution to jump to the beginning of the current word just as if you had called it directly.
   "RECURSE" => ForthDef.new(
     name: "RECURSE",
@@ -879,9 +900,9 @@ DEF_TABLE = {
       state.here_offset += 2
       state.definitions[var_name] = ForthDef.new(
         name: var_name,
-	compile: ->(state) {
-	  state.output("DW LIT2\nDW HereStart+#{var_offset}\n")
-	}
+        compile: ->(state) {
+          state.output("DW LIT2\nDW HereStart+#{var_offset}\n")
+        }
       )
       state.output("DW LIT2\nDW HereStart+#{var_offset}\n")
     }
@@ -1085,6 +1106,15 @@ DEF_TABLE = {
     interpret: "
     jr PAUSE
     "
+  ),
+
+  "UNDEFINE" => ForthDef.new(
+    name: "UNDEFINE",
+    compile: ->(state) {
+      undefine_word = state.next_word
+      state.error("Cannot undefine word \"#{undefine_word.upcase}\" since it is not defined.") unless state.definitions[undefine_word]
+      state.definitions[state.next_word].delete
+    }
   ),
 
   "INCLUDE\"" => ForthDef.new(
