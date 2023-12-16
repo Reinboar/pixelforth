@@ -115,6 +115,10 @@
   SWAP OVER @ + SWAP !
 ;
 
+: WHEN ( ? q -- )
+  [ ] IF
+;
+
 : WHILE ( q -- )
   DUP DIP SWAP
     [ [RECURSE] ]
@@ -130,10 +134,6 @@
     ]
     [ DROP DROP ]
   IF
-;
-
-: WHEN ( ? q -- )
-  [ ] IF
 ;
 
 CONSTANT: TRUE  01h
