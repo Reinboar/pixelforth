@@ -1,0 +1,62 @@
+INCLUDE" struct.ft"
+
+STRUCT STACK
+  MEMBER: PTR
+  MEMBER: MEM
+  MEMBER: SIZE
+ENDSTRUCT
+
+: NEW-STACK ( size -- stack )
+  CREATE-STACK
+  2DUP SWAP CELLS ALLOT HERE @ SWAP STACK-PTR!
+  DUP DUP STACK-PTR@ SWAP STACK-MEM!
+  DUP -ROT STACK-SIZE!
+;
+
+: STACK-GROW ( stack -- )
+  DUP STACK-PTR@ 02h -
+  SWAP STACK-PTR!
+;
+
+: STACK-SHRINK ( stack -- )
+  DUP STACK-PTR@ 02h +
+  SWAP STACK-PTR!
+;
+
+: STACK-OVERFLOW? ( stack -- bool )
+  DUP DUP STACK-MEM@ SWAP STACK-SIZE@ + SWAP
+  STACK-PTR@ SWAP
+  <
+;
+
+: STACK-UNDERFLOW? ( stack -- bool )
+  DUP STACK-PTR@ SWAP STACK-MEM@ >
+;
+
+: STACK-PUSH ( n stack -- )
+  DUP -ROT
+  STACK-PTR@ !
+  STACK-GROW
+;
+
+: STACK-POP ( stack -- n )
+  DUP STACK-SHRINK
+  STACK-PTR@ @
+;
+
+: STACK-PEEK ( stack -- n )
+  DUP STACK-SHRINK
+  DUP STACK-PTR@ @
+  SWAP STACK-GROW
+;
+
+: STACK-DUP ( stack -- )
+  DUP STACK-PEEK
+  SWAP STACK-PUSH
+;
+
+:: STACK-DROP STACK-SHRINK ;
+
+: STACK-PICK ( n stack -- m )
+  STACK-PTR@ SWAP CELLS + @
+;
