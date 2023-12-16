@@ -57,6 +57,14 @@ VARIABLE: ASCII-SIZE !
 
 00d VARIABLE: CURSOR-Y !
 
+: CLEAR-CURRENT-LINE ( -- )
+  0020h
+  00h
+  9800h 06h CURSOR-Y @ << +
+  MEMFILL
+;
+
+
 : AT-CURSOR! ( val -- )
   PRINT-DEST @ CURSOR-X @ +
   05h CURSOR-Y @ << +
