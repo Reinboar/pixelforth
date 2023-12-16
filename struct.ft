@@ -31,6 +31,19 @@ RUBY`
           DW ALLOT
           DW QUOTE_END
         ")
+
+      struct_size_word_name = "SIZE-OF-" + struct[:name]
+      state.definitions[struct_size_word_name] = ForthDef.new(
+        name: struct_size_word_name,
+        label: state.new_label+sanitize_label(struct_size_word_name),
+        interpret: "
+        jp DoCol
+        DW LIT2
+        DW #{struct[:members].size*2}
+        DW QUOTE_END
+        "
+      )
+
       struct[:members].each_with_index do |m,i|
         state.definitions[m+"@"] = ForthDef.new(
           name: m+"@",
