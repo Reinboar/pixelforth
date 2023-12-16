@@ -1,150 +1,102 @@
+INCLUDE" struct.ft"
+
 \  q -> Quotation
 \ cr -> Coroutine
 \ rs -> Return Stack
 \ ds -> Data Stack
 
 \ Coroutine Struct:
-\   0 : status
-\   1 : quotation
-\   2 : return stack address
-\   3 : data stack address
+\   0 : quotation
+\   1 : return stack address
+\   2 : data stack address
 
-CONSTANT: CORO-STARTED 01h
-CONSTANT: CORO-STOPPED 02h
-CONSTANT: CORO-ENDED   03h
+CONSTANT: CORO-ALIVE 01h
+CONSTANT: CORO-DEAD  00h
 
-HERE @ 04h CELLS ALLOT VARIABLE: COROUTINE-POOL !
+STRUCT COROUTINE
+       MEMBER: INTERP-PTR
+       MEMBER: DATA-STACK
+       MEMBER: RETURN-STACK
+       MEMBER: STATUS
+ENDSTRUCT
 
-00h VARIABLE: CURRENT-COROUTINE !
+CREATE-COROUTINE VARIABLE: LAST-COROUTINE !
 
-10h VARIABLE: DEFAULT-CORO-STACK-SIZE !
-
-: CORO-CREATE-STACK ( -- )
-  DEFAULT-CORO-STACK-SIZE @ CELLS ALLOT
-  HERE @
-;
-
-: COROUTINE ( q -- cr ) 
-  HERE @ SWAP
-  CORO-STOPPED ,
-  DUP ,
-  CORO-CREATE-STACK ,
-  CORO-CREATE-STACK ,
-  , 
-;
-
-: CORO-STATUS ( cr -- n )
-  
-;
-
-: CORO-QUOTE ( cr -- q )
-  01h CELLS + 
-;
-
-: CORO-RSTACK ( cr -- rs )
-  02h CELLS +  
-;
-
-: CORO-DSTACK ( cr -- ds )
-  03h CELLS + 
-;
-
-: CORO-IP ( cr -- ip )
-  04h CELLS +
-;
-
-: CORO-START! ( cr -- ) ;
-
-: CORO-STOP! ( cr -- ) ;
-
-: CORO-END! ( cr -- ) ;
-
-: CORO-YIELD! ( -- ) ;
-
-: ROTATE-CORO-POOL ( -- )
-  COROUTINE-POOL @ >R
-  COROUTINE-POOL 01h CELLS +
-  03h [
-    DUP 01h CELLS -
-    OVER @ SWAP !
-    01h CELLS +
-  ] TIMES 
-  R> SWAP 01h CELLS - !
-;
-
-: CLEAR-CORO-IF-ENDED ( -- )
-  COROUTINE-POOL @ 0000h = NOT
-  [
-    COROUTINE-POOL CORO-STATUS @ CORO-ENDED =
-    [ 0000h COROUTINE-POOL ! ] WHEN
-  ] WHEN
-;
-
-: CLEAN-CORO-POOL ( -- )
-  04h [
-    CLEAR-CORO-IF-ENDED
-    ROTATE-CORO-POOL
-  ] TIMES
-;
-
-: CORO-POOL-CURRENT-VACANT? ( -- ? )
-  COROUTINE-POOL @ 00h =
-;
-
-\ Rotates the coroutine pool until it has either searched every slot
-\ or it has found a vacant slot. In the latter case, COROUTINE-POOL @ will be vacant
-: CORO-POOL-FIND-VACANT ( -- )
-  00h
-  [ 
-    +1
-    CORO-POOL-CURRENT-VACANT? 
-      DUP NOT [ ROTATE-CORO-POOL ] WHEN
-    OVER 04h = OR NOT
-  ] WHILE DROP
-;
-
-: INSERT-CORO-POOL ( cr -- ? )
-  CORO-POOL-FIND-VACANT
-  CORO-POOL-CURRENT-VACANT? DUP
-    [ SWAP COROUTINE-POOL ! ]
-    [ SWAP DROP ]
-  IF
-;
-
-\ Swaps the first CR in the pool with the currently running CR
-: SWITCH-CRS ( -- )
-  COROUTINE-POOL @
-  0000h COROUTINE-POOL !
-  CURRENT-COROUTINE @ COROUTINE-POOL !
-  CURRENT-COROUTINE ! 
-;
-
-:: UPDATE-CURRENT-COROUTINE ( -- )
-  DATA-STACK CURRENT-COROUTINE CORO-DSTACK !
-  RETURN-STACK CURRENT-COROUTINE CORO-RSTACK !
-;
-
-: EXECUTE-CURRENT-COROUTINE ( -- )
-  CURRENT-COROUTINE CORO-DSTACK @
-  CURRENT-COROUTINE CORO-RSTACK @
-  CURRENT-COROUTINE CORO-IP @
-  ASM"
+: SAVE-CURRENT-COROUTINE ( cr -- ) \ Saves the current coroutine into the coroutine object on the data stack
+  ASM`
     PopD16
-    ld d,h
-    ld e,l
-    PopD16
-    ld sp,hl
-    PopD16
+    ld a,e
+    ld [hl+],a
+    ld a,d
+    ld [hl+],a
+    ld a,c
+    ld [hl+],a
+    ld a,b
+    ld [hl+],a
+    push bc
     ld b,h
     ld c,l
+    ld hl,sp+2
+    ld a,l
+    ld [bc],a
+    inc bc
+    ld a,h
+    ld [bc],a
+    pop bc
     jp Next
-  "
+  `
 ;
 
-\ Swaps the first CR in the pool with the currently running CR and executes
-: SWITCH-CTX ( -- )
-  UPDATE-CURRENT-COROUTINE
-  SWITCH-CRS
-  EXECUTE-CURRENT-COROUTINE
+: LOAD-COROUTINE ( cr -- ) \ Loads a coroutine from the current data stack and executes it
+  ASM`
+    PopD16
+    ld a,[hl+]
+    ld e,a
+    ld a,[hl+]
+    ld d,a
+    ld a,[hl+]
+    ld c,a
+    ld a,[hl+]
+    ld b,a
+    ld a,[hl+]
+    ld h,[hl]
+    ld l,a
+    ld sp,hl
+    jp Next
+  `
 ;
 
+: LOAD-LAST-COROUTINE ( -- )
+  LAST-COROUTINE @ LOAD-COROUTINE
+;
+
+00h VARIABLE: CURRENT-COROUTINE !
+00h VARIABLE: YIELD-VALUE !
+
+: KILL-CURRENT-COROUTINE ( -- )
+  CORO-DEAD CURRENT-COROUTINE @ COROUTINE-STATUS!
+  LOAD-LAST-COROUTINE
+;
+
+: ->COROUTINE ( q -- cr ) \ Converts a quotation into a coroutine
+  CREATE-COROUTINE
+  DUP -ROT COROUTINE-INTERP-PTR!
+  DUP 20h CELLS ALLOT HERE @ SWAP COROUTINE-DATA-STACK!
+  DUP 1Eh CELLS ALLOT ' KILL-CURRENT-COROUTINE 03h + ,
+  HERE @ 02h - SWAP COROUTINE-RETURN-STACK!
+  DUP CORO-ALIVE SWAP COROUTINE-STATUS!
+;
+
+: CALL-COROUTINE ( cr -- ... ) \ Starts/resumes the passed coroutine
+  DUP COROUTINE-STATUS@ CORO-DEAD = [ DROP [EXIT] ] WHEN
+  CURRENT-COROUTINE !
+  LAST-COROUTINE @ SAVE-CURRENT-COROUTINE
+  CURRENT-COROUTINE @ LOAD-COROUTINE
+  YIELD-VALUE @
+;
+
+: YIELD ( n -- ) \ Halts the current coroutine and resumes the previous coroutine
+  YIELD-VALUE !
+  CURRENT-COROUTINE @ SAVE-CURRENT-COROUTINE
+  LOAD-LAST-COROUTINE
+;
