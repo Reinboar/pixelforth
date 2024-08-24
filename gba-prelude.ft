@@ -1,0 +1,37 @@
+INCLUDE" forth-prelude.ft"
+
+\ Copies memory from src to dst byte by byte, amount is determined by len
+: MEMCPY ( len src dst -- )
+ASM`
+    PopD @ r4 = len, r0 = src, r6 = dst, r7 = current index
+    mov r6, r0
+    PopD
+    mov r7, #0x0
+    2:
+    strb r0, [r6]
+    add r0, r0, #0x01
+    add r6, r6, #0x01
+    add r7, r7, #0x01
+    cmp r7, r4
+    bne 2b
+    PopD
+    GoToNext
+`
+;
+
+\ Copies a zero terminated string from src to dst
+: STRCPY ( src dst -- )
+ASM`
+    PopD @ r0 = dst, r4 = src, r6 = current character
+    mov r6, #0x0
+    2:
+    ldrb r6, [r4]
+    strb r6, [r0]
+    add r0, r0, #0x01
+    add r4, r4, #0x01
+    cmp r6, #0x0
+    bne 2b
+    PopD
+    GoToNext
+`
+;
