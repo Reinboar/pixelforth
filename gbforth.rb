@@ -3,139 +3,104 @@
 require 'optparse'
 
 # Register specification
-# HL = general purpose / 16bit argument
-# SP = return stack pointer
-# A  = general purpose / 8bit argument
-# DE = IP
-# BC = data stack pointer
+# r0 = general purpose
+# r1 = data stack
+# r2 = return stack
+# r3 = instruction pointer
+# r4 = top of stack
 
 def PREAMBLE(here_offset)
 "
-	INCLUDE \"hardware.inc\"
-	SECTION \"Memory\",WRAM0
-	  ds $100
-	DataStackTop:
-	  ds $100
-	ReturnStackTop:
-	  ds $02
-	HereValue:
-	  ds $02
-	HereStart:
-	  ds $02
+.macro PushD
+  str r4, [r1]
+  sub r1, r1, #0x04
+  mov r4, r0
+.endm
 
-	SECTION \"Forth\", ROM0[$100]
-	  jp InitInterp
-	  ds $150 - @,0
-	InitInterp:
-	  ld de,Main
-	  ld bc,DataStackTop
-	  ld sp,ReturnStackTop
-	  ld hl,HereValue
-	  ld a,LOW(HereStart + #{here_offset})
-	  ld [hl+],a
-	  ld a,HIGH(HereStart + #{here_offset})
-	  ld [hl],a
-	  jp Next
+.macro PopD
+  mov r0, r4
+  add r1, r1, #0x04
+  ldr r4, [r1]
+.endm
 
-	DEF LastWord = $FFFF
+.macro PeekD
+  mov r0, r4
+.endm
 
-	MACRO PushD
-	  ld [bc],a
-	  dec bc
-	ENDM
+.macro PushR
+  str r0, [r2]
+  sub r2, r2, #0x04
+.endm
 
-	MACRO PopD
-	  inc bc
-	  ld a,[bc]
-	ENDM
+.macro PopR
+  add r2, r2, #0x04
+  ldr r0, [r2]
+.endm
 
-	MACRO PushD16
-	  ld a,l
-	  ld [bc],a
-	  dec bc
-	  ld a,h
-	  ld [bc],a
-	  dec bc
-	ENDM
+.macro PeekR
+  ldr r0, [r2, #0x04]
+.endm
 
-	MACRO PopD16
-	  inc bc
-	  ld a,[bc]
-	  ld h,a
-	  inc bc
-	  ld a,[bc]
-	  ld l,a
-	ENDM
+.macro GoToNext
+  ldr r0, =Next
+  bx r0
+  .ltorg
+.endm
 
-	MACRO PeekD
-	  inc bc
-	  ld a,[bc]
-	  dec bc
-	ENDM
+.align 4
+.section .text
+.global _start
+_start:
+b InitInterp
+.skip 0xE0
+InitInterp:
+  mov r4, #0x0
+  ldr r1, =DataStackTop
+  ldr r2, =ReturnStackTop
+  ldr r3, =Main
+  ldr r5, =HereStart + #{here_offset}
+  GoToNext
 
-	MACRO PeekD16
-	  inc bc
-	  ld a, [bc]
-	  ld h, a
-	  inc bc
-	  ld a, [bc]
-	  ld l, a
-	  dec bc
-	  dec bc
-	ENDM
+Next:
+  ldr r0, [r3]      @ load word stored at IP
+  add r3, r3, #0x04 @ increment IP
+  bx r0             @ jump to next word
 
-	MACRO PushR
-	  add sp,-1
-	  ld hl,sp+0
-	  ld [hl],a
-	ENDM
+DoConst:
+  ldr r0, [r0, #0x08]
+  PushD
+  GoToNext
 
-	MACRO PopR
-	  ld hl,sp+0
-	  ld a,[hl]
-	  add sp,1
-	ENDM
+DoCol:
+  mov r6, r0
+  add r6, r6, #0x04
+  mov r0, r3
+  PushR
+  mov r3, r6
+  GoToNext
 
-	MACRO PeekR
-	  ld hl,sp
-	  inc hl
-	  ld a,[hl]
-	ENDM
+EndCol:
+  PopR
+  mov r3, r0
+  GoToNext
 
-	Next:
-    ld h,d ; hl = de
-    ld l,e
-    ld a,[hl+] ; hl = mem[hl]
-    ld h,[hl]
-    ld l,a
-	  inc de ; de += 2
-	  inc de
-	  jp hl ; goto hl
-
-	DoConst16:
-	  inc hl
-	  inc hl
-	  inc hl
-	  ld a,[hl+]
-	  ld h,[hl]
-	  ld l,a
-	  PushD16
-	  jp Next
-
-	DoCol:
-	  inc hl
-	  inc hl
-	  inc hl
-	  push de
-	  ld d,h
-	  ld e,l
-	  jp Next
-
-	EndCol:
-	  pop de
-	  jp Next
-
-	"
+.section .ewram
+.align 4
+.skip 0x100
+.align 4
+DataStackTop:
+.skip 0x100
+.align 4
+ReturnStackTop:
+.skip 0x2
+.align 4
+HereValue:
+.skip 0x2
+.align 4
+HereStart:
+.skip 0x2
+.align 4
+"
 end
 
 class ForthDef
@@ -152,7 +117,7 @@ class ForthDef
   end
 
   def execute_and_compile(state)
-    state.output("DW #{@label}\n") if @interpret
+    state.output(".word #{@label}\n") if @interpret
     @compile.call(state) if @compile
   end
 end
@@ -189,15 +154,19 @@ def is_short (token)
   true
 end
 
+def is_word(token)
+  return false if !token || token.length > 9
+end
+
 ##
 # DEF_TABLE contains all forth words known to the compiler.
 DEF_TABLE = {
   "DUP" => ForthDef.new(
     name: "DUP",
     interpret: "
-    PeekD16
-    PushD16
-    jp Next
+    PeekD
+    PushD
+    GoToNext
     "
   ),
 
@@ -205,18 +174,19 @@ DEF_TABLE = {
     name: "2DUP",
     label: "TWO_DUP_FORTH",
     interpret: "
-    jp DoCol
-    DW OVER
-    DW OVER
-    DW QUOTE_END
+    ldr r0, [r1, #0x04]
+    PushD
+    ldr r0, [r1, #0x04]
+    PushD
+    GoToNext
     "
   ),
 
   "DROP" => ForthDef.new(
     name: "DROP",
     interpret: "
-    PopD16
-    jp Next
+    PopD
+    GoToNext
     "
   ),
 
@@ -224,21 +194,17 @@ DEF_TABLE = {
     name: "2DROP",
     label: "TWO_DROP_FORTH",
     interpret: "
-    jp DoCol
-    DW DROP
-    DW DROP
-    DW QUOTE_END
+    PopD
+    PopD
+    GoToNext
     "
   ),
 
   "NIP" => ForthDef.new(
     name: "NIP",
     interpret: "
-    PopD16
-    inc bc
-    inc bc
-    PushD16
-    jp Next
+    add r1, r1, #0x04
+    GoToNext
     "
   ),
 
@@ -246,9 +212,9 @@ DEF_TABLE = {
     name: ">R",
     label: "STASH_FORTH",
     interpret: "
-    PopD16
-    push hl
-    jp Next
+    PopD
+    PushR
+    GoToNext
     "
   ),
 
@@ -256,9 +222,9 @@ DEF_TABLE = {
     name: "R>",
     label: "FETCH_FORTH",
     interpret: "
-    pop hl
-    PushD16
-    jp Next
+    PopR
+    PushD
+    GoToNext
     "
   ),
 
@@ -266,106 +232,41 @@ DEF_TABLE = {
     name: "SWAP",
     label: "SWAP_FORTH",
     interpret: "
-    PopD16
-    push de
-    ld d, h
-    ld e, l
-    PopD16
-    ld a, d
-    ld d, h
-    ld h, a
-    ld a, e
-    ld e, l
-    ld l, a
-    PushD16
-    ld h, d
-    ld l, e
-    PushD16
-    pop de
-    jp Next
+    mov r0, r4
+    ldr r4, [r1, #0x04]
+    str r0, [r1, #0x04]
+    GoToNext
     "
   ),
 
   "OVER" => ForthDef.new(
     name: "OVER",
     interpret: "
-    inc bc
-    inc bc
-    inc bc
-    inc bc
-    ld a, [bc]
-    ld l, a
-    dec bc
-    ld a, [bc]
-    ld h, a
-    dec bc
-    dec bc
-    dec bc
-    PushD16
-    jp Next
+    ldr r0, [r1, #0x04]
+    PushD
+    GoToNext
     "),
 
   "YONDER" => ForthDef.new(
     name: "YONDER",
     interpret: "
-    inc bc
-    inc bc
-    inc bc
-    inc bc
-    inc bc
-    inc bc
-    ld a, [bc]
-    ld l, a
-    dec bc
-    ld a, [bc]
-    ld h, a
-    dec bc
-    dec bc
-    dec bc
-    dec bc
-    dec bc
-    PushD16
-    jp Next
+    ldr r0, [r1, #0x08]
+    PushD
+    GoToNext
     "
   ),
 
   "LIT" => ForthDef.new(
     name: "LIT",
     interpret: "
-    ld h,d
-    ld l,e
-    ld a,[hl+]
+    ldr r0, [r3]
+    add r3, r3, #0x04
     PushD
-    ld d,h
-    ld e,l
-    jp Next
+    GoToNext
     ",
     compile: ->(state) { 
       t = state.next_word
-      state.output("DB $#{t[1..2]}\n") if is_byte(t)
-    }
-  ),
-
-  "LIT2" => ForthDef.new(
-    name: "LIT2",
-    interpret: "
-    ld h,d
-    ld l,e
-    ld a,[hl+]
-    ld d,[hl]
-    inc hl
-    ld e,a
-    ld a,e
-    PushD
-    ld a,d
-    PushD
-    ld d,h
-    ld e,l
-    jp Next
-    ",
-    compile: ->(state) {
-      t = state.next_word
-      state.output("DW $#{t[1..4]}\n") if is_short(t)
+      state.output(".word 0x#{t[1..2]}\n") if is_byte(t)
     }
   ),
 
@@ -374,26 +275,31 @@ DEF_TABLE = {
     name: "C@",
     label: "LOAD_AT",
     interpret: "
-    PopD16
-    ld a,[hl]
-    PushD
-    ld a,0
-    PushD
-    jp Next
+    ldrb r0, [r4]
+    mov r4, r0
+    GoToNext
+    "
+  ),
+
+  # Pushes the halfword pointed to by '&a'.
+  "H@" => ForthDef.new( # ( &a -- c )
+    name: "H@",
+    label: "LOAD_AT_16",
+    interpret: "
+    ldrh r0, [r4]
+    mov r4, r0
+    GoToNext
     "
   ),
 
   # Pushes the cell pointed to by '&a'.
   "@" => ForthDef.new( # ( &a -- n )
     name: "@",
-    label: "LOAD_AT_16",
+    label: "LOAD_AT_32",
     interpret: "
-    PopD16
-    ld a,[hl+]
-    ld h,[hl]
-    ld l,a
-    PushD16
-    jp Next
+    ldr r0, [r4]
+    mov r4, r0
+    GoToNext
     "
   ),
 
@@ -402,26 +308,37 @@ DEF_TABLE = {
     name: "C!",
     label: "STORE_AT",
     interpret: "
-    PopD16
-    PopD
-    PopD
-    ld [hl],a
-    jp Next
+    ldr r0, [r1, #0x04] @ r0 = character
+    strb r0, [r4] @ store character at address (r4)
+    add r1, r1, #0x04 @ pop stack by 1 item
+    ldr r4, [r1] @ update top of stack
+    GoToNext
+    "
+  ),
+
+  # Stores the character 'c' at the address '&a'.
+  "H!" => ForthDef.new( # ( c &a -- )
+    name: "H!",
+    label: "STORE_AT_16",
+    interpret: "
+    ldr r0, [r1, #0x04] @ r0 = character
+    strh r0, [r4] @ store character at address (r4)
+    add r1, r1, #0x04 @ pop stack by 1 item
+    ldr r4, [r1] @ update top of stack
+    GoToNext
     "
   ),
 
   # Stores the cell 'n' at the address '&a'.
   "!" => ForthDef.new( # ( n &a -- )
     name: "!",
-    label: "STORE_AT_16",
+    label: "STORE_AT_32",
     interpret: "
-    PopD16
-    inc hl
-    PopD
-    ld [hl-],a
-    PopD
-    ld [hl],a
-    jp Next
+    ldr r0, [r1, #0x04] @ r0 = character
+    str r0, [r4] @ store word at address (r4)
+    add r1, r1, #0x04 @ pop stack by 1 item
+    ldr r4, [r1] @ update top of stack
+    GoToNext
     "
   ),
 
@@ -430,15 +347,9 @@ DEF_TABLE = {
     name: "+",
     label: "ADD_FORTH_16",
     interpret: "
-    PopD16
-    push de
-    ld d,h
-    ld e,l
-    PopD16
-    add hl,de
-    PushD16
-    pop de
-    jp Next
+    PopD
+    add r4, r4, r0
+    GoToNext
     "
   ),
 
@@ -447,20 +358,9 @@ DEF_TABLE = {
     name: "-",
     label: "SUB_FORTH_16",
     interpret: "
-    PopD16
-    push de
-    ld e,l
-    ld d,h
-    PopD16
-    ld a,l
-    sub e
-    ld l,a
-    ld a,h
-    sbc d
-    ld h,a
-    PushD16
-    pop de
-    jp Next
+    PopD
+    sub r4, r4, r0
+    GoToNext
     "
   ),
 
@@ -469,15 +369,9 @@ DEF_TABLE = {
     name: "&",
     label: "BITWISE_AND_FORTH_16",
     interpret: "
-    PopD16
     PopD
-    and h
-    ld h, a
-    PopD
-    and l
-    ld l, a
-    PushD16
-    jp Next
+    and r4, r4, r0
+    GoToNext
     "
   ),
 
@@ -486,15 +380,9 @@ DEF_TABLE = {
     name: "|",
     label: "BITWISE_OR_FORTH_16",
     interpret: "
-    PopD16
     PopD
-    or h
-    ld h, a
-    PopD
-    or l
-    ld l, a
-    PushD16
-    jp Next
+    orr r4, r4, r0
+    GoToNext
     "
   ),
 
@@ -503,15 +391,9 @@ DEF_TABLE = {
     name: "^",
     label: "BITWISE_XOR_FORTH_16",
     interpret: "
-    PopD16
     PopD
-    xor h
-    ld h, a
-    PopD
-    xor l
-    ld l, a
-    PushD16
-    jp Next
+    eor r4, r4, r0
+    GoToNext
     "
   ),
 
@@ -521,13 +403,8 @@ DEF_TABLE = {
     label: "BITWISE_NOT_FORTH_16",
     interpret: "
     PopD
-    cpl
-    ld h, a
-    PopD
-    cpl
-    ld l, a
-    PushD16
-    jp Next
+    neg r4, r4
+    GoToNext
     "
   ),
   
@@ -536,27 +413,9 @@ DEF_TABLE = {
     name: "<<",
     label: "SHIFT_LEFT_FORTH",
     interpret: "
-    push de
-    PopD16
     PopD
-    ld d,a
-    PopD
-    ld e,a
-    :
-    ld a,e
-    cp 0
-    jr nz, :+
-    ld a, d
-    cp 0
-    jr z, :++
-    :
-    add hl,hl
-    dec de
-    jr :--
-    :
-    PushD16
-    pop de
-    jp Next
+    lsl r4, r0, r4
+    GoToNext
     "
   ),
 
@@ -564,28 +423,9 @@ DEF_TABLE = {
     name: ">>",
     label: "SHIFT_RIGHT_FORTH",
     interpret: "
-    push de
-    PopD16
     PopD
-    ld d,a
-    PopD
-    ld e,a
-    :
-    ld a,e
-    cp 0
-    jr nz, :+
-    ld a, d
-    cp 0
-    jr z, :++
-    :
-    srl h
-    rr l
-    dec de
-    jr :--
-    :
-    PushD16
-    pop de
-    jp Next
+    lsr r4, r0, r4
+    GoToNext
     "
   ),
 
@@ -593,8 +433,10 @@ DEF_TABLE = {
   "HERE" => ForthDef.new(
     name: "HERE",
     interpret: "
-    jp DoConst16
-    DW HereValue
+    ldr r0, =DoConst
+    bx r0
+    .word HereValue
+    .ltorg
     "
   ),
 
@@ -603,23 +445,10 @@ DEF_TABLE = {
     name: "C,",
     label: "COMPILE_CHAR",
     interpret: "
-    ld hl,HereValue
-    ld a,[hl+]
-    ld h,[hl]
-    ld l,a
     PopD
-    PopD
-    ld [hl],a
-    inc hl
-    push de
-    ld d,h
-    ld e,l
-    ld hl,HereValue
-    ld [hl],e
-    inc hl
-    ld [hl],d
-    pop de
-    jp Next
+    strb r0, [r5]
+    add r5, r5, #0x01
+    GoToNext
     "
   ),
 
@@ -628,26 +457,10 @@ DEF_TABLE = {
     name: ",",
     label: "COMPILE_CELL",
     interpret: "
-    push de
-    PopD16
-    ld d,h
-    ld e,l
-    ld hl,HereValue
-    ld a,[hl+]
-    ld h,[hl]
-    ld l,a
-    ld a,e
-    ld [hl+],a
-    ld a,d
-    ld [hl+],a
-    ld d,h
-    ld e,l
-    ld hl,HereValue
-    ld [hl],e
-    inc hl
-    ld [hl],d
-    pop de
-    jp Next
+    PopD
+    str r0, [r5]
+    add r5, r5, #0x04
+    GoToNext
     "
   ),
 
@@ -655,10 +468,8 @@ DEF_TABLE = {
   "CELLS" => ForthDef.new( # ( n -- n )
     name: "CELLS",
     interpret: "
-    PopD16
-    add hl,hl
-    PushD16
-    jp Next
+    add r4, r4, r4
+    GoToNext
     "
   ),
 
@@ -666,13 +477,9 @@ DEF_TABLE = {
   "ALLOT" => ForthDef.new( # ( n -- )
     name: "ALLOT",
     interpret: "
-    jp DoCol
-    DW HERE
-    DW LOAD_AT_16
-    DW ADD_FORTH_16
-    DW HERE
-    DW STORE_AT_16
-    DW QUOTE_END
+    PopD
+    add r5, r0, r5
+    GoToNext
     "
   ),
   # Compiles a string to ROM and pushes its address at runtime
@@ -683,9 +490,9 @@ DEF_TABLE = {
       while ( c = state.next_char ) != '"' do
         forth_string += c
       end
-      state.output("DW BRANCH\nDW :++\n:\n")
-      state.output("DB \"#{forth_string}\", 0\n")
-      state.output(":\nDW LIT2\nDW :--\n")
+      state.output(".word BRANCH\n.word 2f\n1:\n")
+      state.output(".asciz \"#{forth_string}\"\n")
+      state.output(".align 4\n2:\n.word LIT\n.word 1b\n") # TODO: convert anonymous labels to GAS labels
     }
   ),
 
@@ -709,14 +516,8 @@ DEF_TABLE = {
   "BRANCH" => ForthDef.new(
     name: "BRANCH",
     interpret: "
-    ld h,d
-    ld l,e
-    ld a,[hl+]
-    ld h,[hl]
-    ld l,a
-    ld d,h
-    ld e,l
-    jp Next
+    ldr r3, [r3]
+    GoToNext
     "
   ),
 
@@ -725,11 +526,11 @@ DEF_TABLE = {
     name: "CALL",
     label: "CALL_FORTH",
     interpret: "
-    PopD16
-    push de
-    ld d,h
-    ld e,l
-    jp Next
+    mov r0, r3
+    PushR
+    PopD
+    mov r3, r0
+    GoToNext
     "
   ),
 
@@ -738,8 +539,9 @@ DEF_TABLE = {
     name: "EXIT",
     label: "EXIT_FORTH",
     interpret: "
-    pop de
-    jp Next
+    PopR
+    mov r3, r0
+    GoToNext
     "
   ),
 
@@ -748,9 +550,10 @@ DEF_TABLE = {
     name: "[EXIT]",
     label: "QUOTE_EXIT_FORTH",
     interpret: "
-    pop de
-    pop de
-    jp Next
+    PopR
+    PopR
+    mov r3, r0
+    GoToNext
     "
   ),
 
@@ -758,21 +561,27 @@ DEF_TABLE = {
   "RECURSE" => ForthDef.new(
     name: "RECURSE",
     interpret: "
-    ld hl,sp+0
-    ld a,[hl+]
-    ld h,[hl]
-    ld l,a
-    dec hl
-    dec hl
-    ld a,[hl+]
-    ld h,[hl]
-    ld l,a
-    inc hl
-    inc hl
-    inc hl
-    ld d,h
-    ld e,l
-    jp Next
+    ldr r6, [r2]
+    ldr r6, [r6, #-0x04]
+    add r6, r6, #0x04
+    mov r3, r6
+    GoToNext
+
+    @ ld hl,sp+0
+    @ ld a,[hl+]
+    @ ld h,[hl]
+    @ ld l,a
+    @ dec hl
+    @ dec hl
+    @ ld a,[hl+]
+    @ ld h,[hl]
+    @ ld l,a
+    @ inc hl
+    @ inc hl
+    @ inc hl
+    @ ld d,h
+    @ ld e,l
+    @ jp Next
     "
   ),
 
@@ -782,23 +591,12 @@ DEF_TABLE = {
     name: "[RECURSE]",
     label: "QUOTE_RECURSE_FORTH",
     interpret: "
-    ld hl,sp+2
-    ld a,[hl+]
-    ld h,[hl]
-    ld l,a
-    dec hl
-    dec hl
-    ld a,[hl+]
-    ld h,[hl]
-    ld l,a
-    inc hl
-    inc hl
-    inc hl
-    ld d,h
-    ld e,l
+    ldr r6, [r2]
+    ldr r6, [r6, #-0x04]
+    add r6, r6, #0x04
+    mov r3, r6
     PopR
-    PopR
-    jp Next
+    GoToNext
     "
   ),
 
@@ -810,7 +608,7 @@ DEF_TABLE = {
       word_name = state.next_word
       word = state.definitions[word_name]
       state.error("Cannot compile XT of '#{word_name}' because it has not been defined.") unless word
-      state.output("DW LIT2\nDW #{word.label}\n")
+      state.output(".word LIT\n.word #{word.label}\n")
     }
   ),
 
@@ -822,7 +620,7 @@ DEF_TABLE = {
       old_output = state.output_code
       state.output_code = ""
       word_name = state.next_word
-      word_def = "\njp DoCol\n" + raw_compile!(state, ';') + "DW QUOTE_END\n"
+      word_def = "\nb DoCol\n" + raw_compile!(state, ';') + ".word QUOTE_END\n"
       state.definitions[word_name] = ForthDef.new(
         name: word_name,
         label: state.new_label + sanitize_label("_#{word_name}"),
@@ -860,7 +658,7 @@ DEF_TABLE = {
     compile: ->(state) {
       end_quote_label = state.new_label
       state.push(end_quote_label)
-      state.output("DW LIT2\nDW :+\nDW BRANCH\nDW #{end_quote_label}\n:\n")
+      state.output(".word LIT\n.word 1f\n.word BRANCH\n.word #{end_quote_label}\n1:\n")
     }
   ),
 
@@ -873,8 +671,9 @@ DEF_TABLE = {
       state.output("#{end_quote_label}:\n")
     },
     interpret: "
-    pop de
-    jp Next
+    PopR
+    mov r3, r0
+    GoToNext
     "
   ),
 
@@ -886,7 +685,7 @@ DEF_TABLE = {
       state.definitions[const_name] = ForthDef.new(
 	name: const_name,
 	compile: ->(state) {
-          state.output("DW LIT2\nDW $#{const_val}\n")
+          state.output(".word LIT\n.word 0x#{const_val}\n")
 	}
       )  
     }
@@ -897,14 +696,14 @@ DEF_TABLE = {
     compile: ->(state) {
       var_name = state.next_word
       var_offset = state.here_offset
-      state.here_offset += 2
+      state.here_offset += 4
       state.definitions[var_name] = ForthDef.new(
         name: var_name,
         compile: ->(state) {
-          state.output("DW LIT2\nDW HereStart+#{var_offset}\n")
+          state.output(".word LIT\n.word HereStart+#{var_offset}\n")
         }
       )
-      state.output("DW LIT2\nDW HereStart+#{var_offset}\n")
+      state.output(".word LIT\n.word HereStart+#{var_offset}\n")
     }
   ),
 
@@ -913,22 +712,11 @@ DEF_TABLE = {
     name: "=",
     label: "EQUALS_FORTH",
     interpret: "
-    PopD16
     PopD
-    xor h
-    jp nz, :+
-    PopD
-    xor l
-    jp nz, :++
-    ld hl,1
-    PushD16
-    jp Next
-    :
-    PopD
-    :
-    ld hl,0
-    PushD16
-    jp Next
+    subs r4, r4, r0
+    moveq r4, #0x01
+    movne r4, #0x00
+    GoToNext
     "
   ),
 
@@ -937,23 +725,11 @@ DEF_TABLE = {
     name: ">",
     label: "GREATER_FORTH",
     interpret: "
-    PopD16
     PopD
-    cp h
-    jp c, :+
-    PopD
-    cp l
-    jp c, :++
-    jp z, :++
-    ld hl, 1
-    PushD16
-    jp Next
-    :
-    PopD
-    :
-    ld hl, 0
-    PushD16
-    jp Next
+    subs r4, r4, r0
+    movgt r4, #0x01
+    movle r4, #0x00
+    GoToNext
     "
   ),
 
@@ -962,22 +738,11 @@ DEF_TABLE = {
     name: "<",
     label: "LESS_FORTH",
     interpret: "
-    PopD16
     PopD
-    cp h
-    jp c, :+
-    PopD
-    cp l
-    jp c, :++
-    ld hl, 0
-    PushD16
-    jp Next
-    :
-    PopD
-    :
-    ld hl, 1
-    PushD16
-    jp Next
+    subs r4, r4, r0
+    movlt r4, #0x01
+    movge r4, #0x00
+    GoToNext
     "
   ),
 
@@ -987,33 +752,12 @@ DEF_TABLE = {
     label: "AND_FORTH",
     interpret: "
     PopD
-    or a
-    jp nz, :+
-    PopD
-    or a
-    jp nz, :++
-    PopD16
-    ld hl, 0
-    PushD16
-    jp Next
-    :
-    PopD
-    :
-    PopD
-    or a
-    jp nz, :+
-    PopD
-    or a
-    jp nz, :++
-    ld hl, 0
-    PushD16
-    jp Next
-    :
-    PopD
-    :
-    ld hl, 1
-    PushD16
-    jp Next
+    orrs r0, r0, #0x0
+    movne r0, #0x01
+    orrs r4, r4, #0x0
+    movne r4, #0x01
+    and r4, r4, r0
+    GoToNext
     "
   ),
 
@@ -1023,30 +767,12 @@ DEF_TABLE = {
     label: "OR_FORTH",
     interpret: "
     PopD
-    or a
-    jp nz, :+
-    PopD
-    or a
-    jp nz, :++
-    PopD
-    or a
-    jp nz, :+++
-    PopD
-    or a
-    jp nz, :++++
-    ld hl, 0
-    PushD16
-    jp Next
-    :
-    PopD
-    :
-    PopD
-    :
-    PopD
-    :
-    ld hl, 1
-    PushD16
-    jp Next
+    orrs r0, r0, #0x0
+    movne r0, #0x01
+    orrs r4, r4, #0x0
+    movne r4, #0x01
+    orr r4, r4, r0
+    GoToNext
     "
   ),
 
@@ -1055,21 +781,10 @@ DEF_TABLE = {
     name: "NOT",
     label: "NOT_FORTH",
     interpret: "
-    PopD
-    or a
-    jp nz, :+
-    PopD
-    or a
-    jp nz, :++
-    ld hl, 1
-    PushD16
-    jp Next
-    :
-    PopD
-    :
-    ld hl, 0
-    PushD16
-    jp Next
+    orrs r4, r4, #0x0
+    moveq r4, #0x01
+    movne r4, #0x00
+    GoToNext
     "
   ),
   
@@ -1079,24 +794,15 @@ DEF_TABLE = {
     name: "IF",
     label: "IF_FORTH",
     interpret: "
-    push de
-    PopD16
-    ld d,h
-    ld e,l
-    PopD16
+    mov r0, r3 @ save current IP to return stack
+    PushR
+    PopD @ r6 = false branch, r0 = true branch, r4 = condition value
+    mov r6, r0
     PopD
-    or a
-    jp nz, :+
-    PopD
-    or a
-    jp nz, :++
-    jp Next
-    :
-    PopD
-    :
-    ld d,h
-    ld e,l
-    jp Next
+    movs r4, r4
+    moveq r3, r6
+    movne r3, r0
+    GoToNext
     "
   ),
   
@@ -1104,7 +810,7 @@ DEF_TABLE = {
   "PAUSE" => ForthDef.new(
     name: "PAUSE",
     interpret: "
-    jr PAUSE
+    b PAUSE
     "
   ),
 
@@ -1132,7 +838,7 @@ DEF_TABLE = {
   ),
 
   # Compiles a binary file to ROM and passes the address and length onto the data stack.
-  # The path that is searched is dependent on RGBDS, so be sure to set its include path accordingly.
+  # The path that is searched is dependent on arm-none-eabi-as, so be sure to set its include path accordingly.
   "INCBIN\"" => ForthDef.new( # ( -- len addr )
     name: "INCBIN\"",
     compile: ->(state) {
@@ -1142,7 +848,7 @@ DEF_TABLE = {
       end
       bin_label = state.new_label
       end_bin_label = state.new_label
-      state.output("DW BRANCH\nDW #{end_bin_label}\n#{bin_label}:\nINCBIN \"#{filename}\"\n#{end_bin_label}:\nDW LIT2\nDW #{end_bin_label} - #{bin_label}\nDW LIT2\nDW #{bin_label}\n")
+      state.output(".word BRANCH\n.word #{end_bin_label}\n#{bin_label}:\n.incbin \"#{filename}\"\n#{end_bin_label}:\n.word LIT\n.word #{end_bin_label} - #{bin_label}\n.word LIT\n.word #{bin_label}\n")
     }
   ),
 
@@ -1155,7 +861,8 @@ DEF_TABLE = {
        end
        start_asm_label = state.new_label
        end_asm_label = state.new_label
-       state.output("DW BRANCH\nDW #{end_asm_label}\n#{start_asm_label}:\n#{assembly}\n#{end_asm_label}:\nDW #{start_asm_label}\n")
+       state.output(".word BRANCH\n.word #{end_asm_label}\n.align 4\n#{start_asm_label}:\n#{assembly}\n#{end_asm_label}:\n.word #{start_asm_label}\n")
+
      }
   ),
 
@@ -1170,17 +877,6 @@ DEF_TABLE = {
     }
   ),
 
-  "DEBUG\"" => ForthDef.new(
-    name: "DEBUG\"",
-    compile: ->(state) {
-      debug_msg = ""
-      while ( c = state.next_char ) != '"'
-        debug_msg += c
-      end
-      state.output("DW BRANCH\nDW :+++\n:\nld d,d\njr :+\nDW $6464\nDW $0000\nDB \"#{debug_msg}\", 0\n:\njp Next\n:\nDW :---\n")
-    }
-  )
-      
 }
 
 class CompilerState
@@ -1261,7 +957,7 @@ def raw_compile!(compiler_state, end_token)
     if compiler_state.definitions[t]
       compiler_state.definitions[t].execute_and_compile(compiler_state)
     elsif (num = parse_number(t)) != nil
-      compiler_state.output("DW LIT2\nDW $#{num}\n")
+      compiler_state.output(".word LIT\n.word 0x#{num}\n")
     else
       compiler_state.error("'#{t}' is not defined.")
     end
@@ -1273,11 +969,11 @@ def compile(code, def_table, include_paths)
   state = CompilerState.new(code, compile: false, definitions: def_table)
   state.include_paths = include_paths
   asm_defs = ''
-  state.output("\nMain:\n")
+  state.output("\n.align 4\nMain:\n")
   raw_compile!(state, nil)
-  def_table.each_value { |d| asm_defs += d.compile_definition if d.interpret }
-  state.output("DW PAUSE\n")
-  PREAMBLE(state.here_offset) + asm_defs + state.output_code
+  def_table.each_value { |d| asm_defs += ".align 4\n" + d.compile_definition if d.interpret }
+  state.output(".word PAUSE\n")
+  PREAMBLE(state.here_offset) + "\n.align 4\n.section .text\n" + asm_defs + state.output_code
 end
 
 def sanitize_label(label)

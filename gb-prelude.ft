@@ -261,6 +261,48 @@ CONSTANT: JOYPAD-B      20h
 CONSTANT: JOYPAD-SELECT 40h
 CONSTANT: JOYPAD-START  80h
 
+\ b < 20, c < 18
+: VMEMCPY ( src -- )
+  ASM`
+    push de ; de = ip
+    push bc ; bc = data stack
+    PopD16
+    ld b, 0 ; b = x
+    ld c, 0 ; c = y
+    ld de, $9800 ; de = VRAM addr, hl = source buffer
+    :
+    ld a, b
+    cp 20 ; if x == 20, jump to branch
+    jr z, :+
+    ld a, [hl]
+    ld [de], a ; VRAM[x,y] = src[x,y]
+    inc hl
+    inc de
+    inc b ; VRAM++, src++, x++
+    jr :- ; continue loop
+    :
+    ld b, 0 ; increment y and reset x, add 32 to VRAM and src
+    inc c
+    push bc ; bc = x and y
+    ld bc, 32 ; bc = (u16)32
+    add hl, bc
+    push hl
+    ld h, d
+    ld l, e
+    add hl, bc
+    ld d, h
+    ld e, l
+    pop hl
+    pop bc ; bc = x and y
+    ld a, c
+    cp 18
+    jr nz, :--
+    pop bc
+    pop de
+    jp Next
+  `
+;
+
 : MEMCPY ( len src dst -- )
   ASM`
     push de
