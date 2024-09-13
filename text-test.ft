@@ -1,0 +1,48 @@
+INCLUDE" gb-prelude.ft"
+INCLUDE" array.ft"
+INCLUDE" text.ft"
+
+VARIABLE: ASCII-PATTERN
+VARIABLE: ASCII-SIZE
+
+INCBIN" ascii.bin"
+ASCII-PATTERN !
+ASCII-SIZE !
+
+: SCREEN-OFF ( -- )
+    \ Disable LCD during VBLANK
+    WAIT-VBLANK
+    00h
+    LCD-DISABLE
+    LCDC C!
+;
+
+: SCREEN-ON ( -- )
+    \ Enable LCD
+    00h
+    LCD-ENABLE
+    LCD-WINDOW-DISABLE
+    LCD-BG-TILE-PATTERN-0
+    LCD-BG-TILE-MAP-0
+    LCD-OBJ-DISABLE
+    LCD-BG-WINDOW-ENABLE
+    LCDC C!
+;
+
+: LOAD-DEFAULT-PALETTE ( -- )
+    \ Set palette
+    11111100b BGP C!
+;
+
+: LOAD-FONT ( -- )
+    \ Copy font pattern to VRAM
+    ASCII-SIZE @ ASCII-PATTERN @ TILE-PATTERN-0 MEMCPY
+;
+
+SCREEN-OFF
+LOAD-DEFAULT-PALETTE
+LOAD-FONT
+
+" HELLO WORLD" PRINT
+
+SCREEN-ON

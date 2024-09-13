@@ -4,6 +4,9 @@ CONSTANT: GREEN-SWAP 04000002h \ Undocumented by Nintendo
 CONSTANT: DISPSTAT   04000004h
 CONSTANT: VCOUNT     04000006h \ Read only
 
+\ Background Memory
+CONSTANT: BGPAL      05000000h \ Background Palette memory (512 bytes)
+
 \ Background Control Registers
 CONSTANT: BG0CNT     04000008h
 CONSTANT: BG1CNT     0400000Ah
@@ -147,9 +150,14 @@ CONSTANT: JOYSTAT     04000158h \ SIO JOY Bus Receive Status
 
 
 \ *** INTERRUPT REGISTERS ***
-CONSTANT: IE          04000200h \ Interrupt Enable Register
-CONSTANT: IF          04000202h \ Interrupt Request Flags
+CONSTANT: INTENABLE          04000200h \ Interrupt Enable Register
+CONSTANT: INTFLAGS          04000202h \ Interrupt Request Flags
 CONSTANT: WAITCNT     04000204h \ GamePak Waitstate Control
 CONSTANT: IME         04000208h \ Interrupt Master Enable Register
 CONSTANT: POSTFLG     04000300h \ Post Boot Flag (Undocumented)
-CONSTNAT: HALTCNT     04000301h \ Power Down Control (Undocumented)
+CONSTANT: HALTCNT     04000301h \ Power Down Control (Undocumented)
+
+
+\ *** OAM REGISTERS / MEMORY ***
+CONSTANT: OAM         07000000h \ OAM OBJ memory
+CONSTANT: OAMPAL      05000200h \ OAM Palette memory

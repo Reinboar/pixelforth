@@ -308,10 +308,9 @@ DEF_TABLE = {
     name: "C!",
     label: "STORE_AT",
     interpret: "
-    ldr r0, [r1, #0x04] @ r0 = character
-    strb r0, [r4] @ store character at address (r4)
-    add r1, r1, #0x04 @ pop stack by 1 item
-    ldr r4, [r1] @ update top of stack
+    PopD
+    strb r4, [r0]
+    PopD
     GoToNext
     "
   ),
@@ -321,10 +320,9 @@ DEF_TABLE = {
     name: "H!",
     label: "STORE_AT_16",
     interpret: "
-    ldr r0, [r1, #0x04] @ r0 = character
-    strh r0, [r4] @ store character at address (r4)
-    add r1, r1, #0x04 @ pop stack by 1 item
-    ldr r4, [r1] @ update top of stack
+    PopD
+    strh r4, [r0]
+    PopD
     GoToNext
     "
   ),
@@ -334,10 +332,9 @@ DEF_TABLE = {
     name: "!",
     label: "STORE_AT_32",
     interpret: "
-    ldr r0, [r1, #0x04] @ r0 = character
-    str r0, [r4] @ store word at address (r4)
-    add r1, r1, #0x04 @ pop stack by 1 item
-    ldr r4, [r1] @ update top of stack
+    PopD
+    str r4, [r0]
+    PopD
     GoToNext
     "
   ),
@@ -521,6 +518,18 @@ DEF_TABLE = {
     "
   ),
 
+  "BRANCH0" => ForthDef.new(
+    name: "BRANCH0",
+    label: "BRANCH_ZERO",
+    interpret: "
+    PopD
+    cmp r0, #0x00
+    ldreq r3, [r3]
+    addne r3, r3, #0x04
+    GoToNext
+    "
+  ),
+
   # Takes an address and transfers execution to it. This works on both execution tokens and quotation addresses.
   "CALL" => ForthDef.new( # ( xt -- ... )
     name: "CALL",
@@ -561,27 +570,11 @@ DEF_TABLE = {
   "RECURSE" => ForthDef.new(
     name: "RECURSE",
     interpret: "
-    ldr r6, [r2]
-    ldr r6, [r6, #-0x04]
-    add r6, r6, #0x04
+    ldr r6, [r2, #0x04]
+    sub r6, r6, #0x04
     mov r3, r6
+    PopR
     GoToNext
-
-    @ ld hl,sp+0
-    @ ld a,[hl+]
-    @ ld h,[hl]
-    @ ld l,a
-    @ dec hl
-    @ dec hl
-    @ ld a,[hl+]
-    @ ld h,[hl]
-    @ ld l,a
-    @ inc hl
-    @ inc hl
-    @ inc hl
-    @ ld d,h
-    @ ld e,l
-    @ jp Next
     "
   ),
 
@@ -591,9 +584,8 @@ DEF_TABLE = {
     name: "[RECURSE]",
     label: "QUOTE_RECURSE_FORTH",
     interpret: "
-    ldr r6, [r2]
-    ldr r6, [r6, #-0x04]
-    add r6, r6, #0x04
+    ldr r6, [r2, #0x08]
+    sub r6, r6, #0x04
     mov r3, r6
     PopR
     GoToNext
@@ -645,7 +637,7 @@ DEF_TABLE = {
         name: word_name,
         compile: ->(state) {
           state.output(word_def)
-	}
+        }
       )
       state.output_code = old_output
     }
@@ -683,10 +675,10 @@ DEF_TABLE = {
       const_name = state.next_word
       const_val = parse_number(state.next_word)
       state.definitions[const_name] = ForthDef.new(
-	name: const_name,
-	compile: ->(state) {
-          state.output(".word LIT\n.word 0x#{const_val}\n")
-	}
+        name: const_name,
+        compile: ->(state) {
+        state.output(".word LIT\n.word 0x#{const_val}\n")
+        }
       )  
     }
   ),
@@ -776,6 +768,49 @@ DEF_TABLE = {
     "
   ),
 
+  # Takes two quotations and a boolean byte. Calls the first quotation if the byte is True,
+  #   calls the second quotation if the byte is False.
+  "IF" => ForthDef.new( # ( n &a &b -- ... )
+    name: "IF",
+    label: "IF_FORTH",
+    interpret: "
+    mov r0, r3 @ save current IP to return stack
+    PushR
+    PopD @ r6 = false branch, r0 = true branch, r4 = condition value
+    mov r6, r0
+    PopD
+    cmp r4, #0x00
+    moveq r3, r6
+    movne r3, r0
+    GoToNext
+    "
+  ),
+
+  "SWITCH" => ForthDef.new( # ( -- )
+    name: "SWITCH",
+    compile: ->(state) {
+      switch_exit_label = state.new_label
+      state.push(switch_exit_label) # push the label to be used at the end of the switch structure, so that it is available to all cases
+    }
+  ),
+
+  "CASE" => ForthDef.new( # ( test-val cond quote -- )
+    name: "CASE",
+    compile: ->(state) {
+      switch_exit_label = state.pop
+      state.output(".word SWAP_FORTH\n.word YONDER\n.word EQUALS_FORTH\n.word BRANCH_ZERO\n.word 1f\n.word CALL_FORTH\n.word BRANCH\n.word #{switch_exit_label}\n1:\n.word DROP\n")
+      state.push(switch_exit_label)
+    }
+  ),
+
+  "END-SWITCH" => ForthDef.new( # ( -- )
+    name: "END-SWITCH",
+    compile: ->(state) {
+      switch_exit_label = state.pop
+      state.output("#{switch_exit_label}:\n.word DROP\n")
+    }
+  ),
+
   # Performs a logical NOT on a boolean byte. This is a logical NOT, not a bitwise NOT.
   "NOT" => ForthDef.new( # ( a -- !a )
     name: "NOT",
@@ -788,24 +823,7 @@ DEF_TABLE = {
     "
   ),
   
-  # Takes two quotations and a boolean byte. Calls the first quotation if the byte is True,
-  #   calls the second quotation if the byte is False.
-  "IF" => ForthDef.new( # ( n &a &b -- ... )
-    name: "IF",
-    label: "IF_FORTH",
-    interpret: "
-    mov r0, r3 @ save current IP to return stack
-    PushR
-    PopD @ r6 = false branch, r0 = true branch, r4 = condition value
-    mov r6, r0
-    PopD
-    movs r4, r4
-    moveq r3, r6
-    movne r3, r0
-    GoToNext
-    "
-  ),
-  
+
   # Halts the system by creating an infinite loop.
   "PAUSE" => ForthDef.new(
     name: "PAUSE",

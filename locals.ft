@@ -19,12 +19,12 @@ RUBY`
           name: l,
           compile: lambda do |state|
             state.output("
-            DW LIT2
-            DW #{i+1}\n")
+            .word LIT
+            .word #{i+1}\n")
             locals_stack_label.call(state)
             state.output("
-            DW LOAD_AT_16
-            DW #{stack_pick_label}
+            .word LOAD_AT_32
+            .word #{stack_pick_label}
             ")
           end
         )
@@ -32,7 +32,7 @@ RUBY`
 
       local_def_names.size.times do |i|
         locals_stack_label.call(state)
-        state.output("DW LOAD_AT_16\nDW #{stack_push_label}\n")
+        state.output(".word LOAD_AT_32\n.word #{stack_push_label}\n")
       end
 
       state.push(local_def_names.size)
@@ -46,11 +46,11 @@ RUBY`
       stack_shrink_label = state.definitions["STACK-SHRINK"].label
       num_locals = state.pop
       locals_stack_label.call(state)
-      state.output("DW LOAD_AT_16\n")
+      state.output(".word LOAD_AT_32\n")
       num_locals.times do |i|
-        state.output("DW DUP\nDW #{stack_shrink_label}\n")
+        state.output(".word DUP\n.word #{stack_shrink_label}\n")
       end
-      state.output("DW DROP\n")
+      state.output(".word DROP\n")
     end
   )
 `

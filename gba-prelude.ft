@@ -1,4 +1,5 @@
 INCLUDE" forth-prelude.ft"
+INCLUDE" gba-io.ft"
 
 \ Copies memory from src to dst byte by byte, amount is determined by len
 : MEMCPY ( len src dst -- )
@@ -35,3 +36,27 @@ ASM`
     GoToNext
 `
 ;
+
+\ *** Keypad Words ***
+
+CONSTANT: BUTTON-A      00h
+CONSTANT: BUTTON-B      01h
+CONSTANT: BUTTON-SELECT 02h
+CONSTANT: BUTTON-START  04h
+CONSTANT: BUTTON-RIGHT  08h
+CONSTANT: BUTTON-LEFT   10h
+CONSTANT: BUTTON-UP     20h
+CONSTANT: BUTTON-DOWN   40h
+CONSTANT: BUTTON-R      80h
+CONSTANT: BUTTON-L     100h
+
+\ *** Timer Words ***
+
+CONSTANT: TIMER-ENABLED   80h
+CONSTANT: TIMER-CASCADE   04h
+CONSTANT: TIMER-FREQ-1    00h
+CONSTANT: TIMER-FREQ-64   01h
+CONSTANT: TIMER-FREQ-256  02h
+CONSTANT: TIMER-FREQ-1024 03h
+
+\ *** Audio Words ***
